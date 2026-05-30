@@ -3,7 +3,7 @@
 > **A Multi-Agent LLM Workflow for Iterative Quality Control in Low-Resource Dialectal Speech Corpus Curation**  
 > *Author: Anuj Sarker (anujsarker02@gmail.com)*  
 > *Affiliation: Ahsanullah University of Science and Technology, Dhaka, Bangladesh*  
-> *Under Review / Accepted at AI4Research @ ICML 2026 Workshop · Track: Iterative Research Automation & Agents*
+> *Under Review at AI4Research @ ICML 2026 Workshop · Track: Iterative Research Automation & Agents*
 
 ---
 
