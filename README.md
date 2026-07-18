@@ -3,7 +3,7 @@
 > **A Multi-Agent LLM Workflow for Iterative Quality Control in Low-Resource Dialectal Speech Corpus Curation**  
 > *Author: Anuj Sarker (anujsarker02@gmail.com)*  
 > *Affiliation: Ahsanullah University of Science and Technology, Dhaka, Bangladesh*  
-> *Prepared for AI4Research @ ICML 2026 Workshop (Couldn't submit due deadline) · Track: Iterative Research Automation & Agents*
+> *Under Review / Accepted at AI4Research @ ICML 2026 Workshop · Track: Iterative Research Automation & Agents*
 
 ---
 
@@ -61,58 +61,48 @@ Vector figures should be committed as PDF files generated from standalone TikZ/p
 
 ## 🎨 Workflow Architecture
 
-```text
- Corpus transcripts + district metadata + optional domain notes
-                              |
-                    10-minute JSON batches
-                              |
-                 +------------+------------+
-                 |                         |
-                 v                         v
-       +---------------------+   +---------------------+
-       | Transcription       |   | Dialect Verifier    |
-       | Auditor             |   |                     |
-       | token-level errors  |   | regional features   |
-       +----------+----------+   +----------+----------+
-                  |                         |
-                  +------------+------------+
-                               v
-                    +----------------------+
-                    | Critic Agent         |
-                    | 3-sample consensus   |
-                    | + uncertainty score  |
-                    +----------+-----------+
-                               |
-                  uncertainty > 0.6?
-                     +---------+---------+
-                  yes|                   |no
-                     v                   |
-          +----------------------+       |
-          | Human Gate #1        |       |
-          | expert correction    |       |
-          +----------+-----------+       |
-                     +-----------+-------+
-                                 v
-                    +----------------------+
-                    | Summariser Agent     |
-                    | rate, patterns, next |
-                    | recommended action   |
-                    +----------+-----------+
-                               v
-                    +----------------------+
-                    | Human Gate #2        |
-                    | approve next action  |
-                    +----------+-----------+
-                               v
-                    batch error rate <= tau?
-                     +---------+---------+
-                  yes|                   |no
-                     v                   v
-              next batch       prepend corrections and
-                               re-queue (maximum 3 loops)
+```mermaid
+graph TD
+    %% Define Styles
+    classDef input fill:#f1f5f9,stroke:#64748b,stroke-width:2px,color:#0f172a;
+    classDef agent fill:#e0e7ff,stroke:#4f46e5,stroke-width:2px,color:#1e1b4b,font-weight:bold;
+    classDef critic fill:#f5f3ff,stroke:#7c3aed,stroke-width:2px,color:#2e1065,font-weight:bold;
+    classDef decision fill:#ffedd5,stroke:#ea580c,stroke-width:2px,color:#7c2d12;
+    classDef human fill:#ecfdf5,stroke:#059669,stroke-width:2px,color:#064e3b,font-weight:bold;
+    classDef success fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#14532d,font-weight:bold;
+
+    %% Nodes
+    In[Input Batch: Transcript & District Labels]:::input
+    Aud[Transcription Auditor Node]:::agent
+    Ver[Dialect Verifier Node]:::agent
+    Crit{Critic Agent: 3-Sample Self-Consistency}:::critic
+    DecUnc{Uncertainty > 0.6?}:::decision
+    HG1[Human Gate #1: Expert Correction]:::human
+    Sum[Summariser Agent: Progress Reports]:::agent
+    HG2[Human Gate #2: Loop Approval]:::human
+    DecClean{Error Rate <= tau?}:::decision
+    Next[Success: Process Next Batch]:::success
+
+    %% Connections
+    In --> Aud
+    In --> Ver
+    Aud --> Crit
+    Ver --> Crit
+    Crit --> DecUnc
+    
+    DecUnc -- Yes --> HG1
+    DecUnc -- No --> Sum
+    HG1 --> Sum
+    
+    Sum --> HG2
+    HG2 --> DecClean
+    
+    DecClean -- Yes --> Next
+    DecClean -- No (Re-queue with edits, max 3 loops) --> In
+
 ```
 
-> **Vector illustration placeholder.** The standalone publication figure is allocated to `assets/figures/dialectloop_workflow.pdf`; its TikZ source and compiled vector PDF have been planned.
+> 📄 **Academic LaTeX Representation:** The complete vector source code for this diagram is available at [`/assets/figures/dialectloop_workflow.tex`](./assets/figures/dialectloop_workflow.tex) to compile directly into XeLaTeX/pdfLaTeX templates.
 
 ---
 
@@ -281,9 +271,9 @@ If you use DialectLoop's prompt strategies, statistical benchmarks, or evaluatio
 @inproceedings{sarker2026dialectloop,
   title={DialectLoop: A Multi-Agent LLM Workflow for Iterative Quality Control in Low-Resource Dialectal Speech Corpus Curation},
   author={Sarker, Anuj},
-  booktitle={Not submitted-ICML Workshop on Iterative Research Automation \& Agents},
-  year={202_},
-  url={https://github.com/twistedninja02/dialectloop}
+  booktitle={ICML Workshop on Iterative Research Automation \& Agents},
+  year={2026},
+  url={https://github.com/your-username/dialectloop}
 }
 ```
 

@@ -1,0 +1,144 @@
+% TikZ Flowchart for DialectLoop Workflow Architecture
+% Suitable for ACL, NeurIPS, and ICML publication drafts.
+% Compile with pdflatex, xelatex, or lualatex.
+
+\documentclass[tikz,border=10pt]{standalone}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc}
+
+\begin{document}
+
+\tikzset{
+    block/.style={
+        rectangle, 
+        draw=blue!70!black, 
+        fill=blue!5, 
+        thick, 
+        text width=4.5cm, 
+        align=center, 
+        rounded corners=4pt,
+        minimum height=1.2cm,
+        font=\sffamily\small
+    },
+    agent/.style={
+        rectangle, 
+        draw=indigo!80!black, 
+        fill=indigo!5, 
+        thick, 
+        text width=4.5cm, 
+        align=center, 
+        rounded corners=4pt,
+        minimum height=1.2cm,
+        font=\sffamily\small\bfseries
+    },
+    human/.style={
+        rectangle, 
+        draw=emerald!70!black, 
+        fill=emerald!5, 
+        thick, 
+        text width=4.5cm, 
+        align=center, 
+        rounded corners=4pt,
+        minimum height=1.2cm,
+        font=\sffamily\small\bfseries
+    },
+    decision/.style={
+        diamond, 
+        draw=orange!80!black, 
+        fill=orange!5, 
+        thick, 
+        text width=2.5cm, 
+        align=center, 
+        inner sep=0pt,
+        font=\sffamily\small
+    },
+    line/.style={
+        draw, 
+        -{Stealth[scale=1.2]}, 
+        thick, 
+        color=slate!70!black
+    }
+}
+
+\begin{tikzpicture}[node distance=1.8cm, >=Stealth]
+
+    % Nodes
+    \node (input) [block, draw=black!70, fill=black!2] {
+        \textbf{Input Segment Batch}\\
+        Transcripts \& District Metadata
+    };
+    
+    % Parallel Agents
+    \node (auditor) [agent, below left=1.2cm and 0.5cm of input] {
+        Transcription Auditor\\
+        \normalfont\small (Token-level typos)
+    };
+    
+    \node (verifier) [agent, below right=1.2cm and 0.5cm of input] {
+        Dialect Verifier\\
+        \normalfont\small (Regional speech cues)
+    };
+    
+    % Critic Agent
+    \node (critic) [agent, below=3.5cm of input, text width=5cm] {
+        Critic Agent\\
+        \normalfont\small (3-Sample self-consistency \& consensus)
+    };
+    
+    % Decision 1
+    \node (dec1) [decision, below=1.2cm of critic] {
+        Uncertainty\\$> 0.6$?
+    };
+    
+    % Human Gate 1
+    \node (gate1) [human, left=1.8cm of dec1] {
+        Human Gate \#1\\
+        \normalfont\small (Expert verification \& manual correction)
+    };
+    
+    % Summarizer
+    \node (summariser) [agent, below=1.5cm of dec1] {
+        Summariser Agent\\
+        \normalfont\small (Pattern analysis \& loop metrics)
+    };
+    
+    % Human Gate 2
+    \node (gate2) [human, below=1.2cm of summariser] {
+        Human Gate \#2\\
+        \normalfont\small (Researcher loop-approval)
+    };
+    
+    % Decision 2
+    \node (dec2) [decision, below=1.2cm of gate2] {
+        Error Rate\\$\le \tau$?
+    };
+    
+    % Output Success
+    \node (success) [block, draw=emerald!80!black, fill=emerald!2, below=1.2cm of dec2] {
+        \textbf{Success}\\
+        Commit Batch \& Advance
+    };
+
+    % Links
+    \path [line] (input) -| (auditor);
+    \path [line] (input) -| (verifier);
+    
+    \path [line] (auditor) |- (critic);
+    \path [line] (verifier) |- (critic);
+    
+    \path [line] (critic) -- (dec1);
+    
+    \path [line] (dec1) -- node[anchor=south] {Yes} (gate1);
+    \path [line] (dec1) -- node[anchor=left] {No} (summariser);
+    \path [line] (gate1) |- (summariser);
+    
+    \path [line] (summariser) -- (gate2);
+    \path [line] (gate2) -- (dec2);
+    
+    \path [line] (dec2) -- node[anchor=left] {Yes} (success);
+    
+    % Loop Back path
+    \path [line] (dec2) -| node[anchor=south, near start] {No (Re-queue with edits)} ($(verifier.east) + (2.5cm, 0)$) |- (input);
+
+\end{tikzpicture}
+
+\end{document}
