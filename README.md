@@ -40,12 +40,14 @@ DialectLoop/
 ├── main.tex                          # Main LaTeX paper source (XeLaTeX/LuaLaTeX)
 ├── assets/                           # Publication vectors and raw artifacts
 │   ├── figures/                      # Compiled vector PDFs
-│   │   ├── dialectloop_workflow.pdf  # [planned] Standalone TikZ output
+│   │   ├── dialectloop_workflow.tex  # Core standalone TikZ diagram source code
 │   │   └── performance_comparison.pdf# [planned] pgfplots output
 │   └── tables/                       # Raw booktabs LaTeX source files
-│       ├── cost_matrix.tex            # Raw cost-benefit table
-│       ├── validation_profile.tex     # Raw dataset stratified sample profile
-│       └── significance_matrix.tex    # Raw bootstrapped significance table
+│       ├── agent_roles.tex           # Raw agent roles table
+│       ├── dataset_profile.tex       # Raw dataset stratified sample profile
+│       ├── performance_summary.tex   # Raw performance summary table
+│       ├── significance_matrix.tex    # Raw bootstrapped significance table
+│       └── cost_matrix.tex            # Raw cost-benefit table
 ├── src/                              # Interactive web application & pipeline
 │   ├── components/                    # Dashboard sub-components
 │   ├── App.tsx                        # Main Interactive Dashboard UI
@@ -115,7 +117,7 @@ graph TD
 | **Critic Agent** | Cross-validates Auditor and Verifier outputs; resolves conflicts | Self-consistency across 3 samples | Consensus flag and uncertainty score |
 | **Summariser Agent** | Produces a structured report for the human gate | Structured JSON with explicit uncertainty | Ranked segments for human review |
 
-> **Raw LaTeX.** Standalone booktabs sources are maintained inside `/assets/tables/` for publication rendering.
+> 📄 *Raw LaTeX booktabs source code for paper drafting is available at [`/assets/tables/agent_roles.tex`](./assets/tables/agent_roles.tex).*
 
 ---
 
@@ -152,7 +154,7 @@ For a simple random sample of 1,200 from 8,400 items, the paper reports an appro
 | Khulna / Southwest | 210 | 21.0 | 10.8% |
 | **Total / weighted profile** | **1,200** | **120.0** | **11.0%** |
 
-> 📄 *Raw LaTeX booktabs source code for paper drafting is available at `/assets/tables/validation_profile.tex`.*
+> 📄 *Raw LaTeX booktabs source code for paper drafting is available at [`/assets/tables/dataset_profile.tex`](./assets/tables/dataset_profile.tex).*
 
 ### Evaluation Metrics
 
@@ -182,6 +184,8 @@ where $p_o$ is observed agreement and $p_e$ is agreement expected from the margi
 | **Researcher hours saved / 74h** | --- | 55h | **81h** | Extra 26h vs. GPT-4o |
 | **Inter-annotator agreement ($\kappa$)** | 0.74 | 0.71 | **0.86** | +0.12 $\kappa$ improvement |
 
+> 📄 *Raw LaTeX booktabs source code for paper drafting is available at [`/assets/tables/performance_summary.tex`](./assets/tables/performance_summary.tex).*
+
 Qualitatively, the paper reports that the Critic resolved 94% of Auditor–Verifier disagreements without escalation across 12 iterations. About 11% of segments required researcher review. Summaries were considered actionable in 10 of 12 iterations, and expert agreement with DialectLoop's flagged corrections was 89.4% on the validation set.
 
 ---
@@ -201,7 +205,7 @@ The primary comparison bootstraps the paired improvement $\Delta^{(b)}=\hat{\the
 | **Error Detection Acc.** | 79.0% [77.2%, 80.8%] | **91.0% [89.4%, 92.6%]** | **+12.0%** | **< 0.001** |
 | **Cohen's Kappa ($\kappa$)** | 0.71 [0.68, 0.74] | **0.86 [0.83, 0.89]** | **+0.15** | **< 0.001** |
 
-> 📄 *Raw LaTeX booktabs source code for paper drafting is available at `/assets/tables/significance_matrix.tex`.*
+> 📄 *Raw LaTeX booktabs source code for paper drafting is available at [`/assets/tables/significance_matrix.tex`](./assets/tables/significance_matrix.tex).*
 
 ---
 
@@ -221,7 +225,7 @@ $$C_{\text{AI}}= \left(T_{\text{in}}R_{\text{in}}+T_{\text{out}}R_{\text{out}}\r
 | **Total Financial Cost (USD)** | **$24,140.00** | **$14,655.00** | **$5,342.50** |
 | **Net Savings vs. Manual** | Baseline | $9,485.00 (39%) | **$18,797.50 (78%)** |
 
-> 📄 *Raw LaTeX booktabs source code for paper drafting is available at `/assets/tables/cost_matrix.tex`.*
+> 📄 *Raw LaTeX booktabs source code for paper drafting is available at [`/assets/tables/cost_matrix.tex`](./assets/tables/cost_matrix.tex).*
 
 ---
 

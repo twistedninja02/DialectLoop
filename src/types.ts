@@ -32,6 +32,7 @@ export interface CriticDecision {
   verifier_report: VerifierReport;
   escalated: boolean; // true if uncertainty > 0.6
   researcher_correction?: string; // free-text researcher feedback injected at Human Gate #1
+  resolution_reasoning?: string;
 }
 
 export interface IterationReport {

@@ -1,0 +1,19 @@
+% Agent Roles & Prompt Strategies in DialectLoop
+% Formatted for standard ACL/NeurIPS LaTeX style using the booktabs package.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{llll}
+\toprule
+\textbf{Agent Node} & \textbf{Core Role} & \textbf{Prompt Strategy} & \textbf{Output Format} \\
+\midrule
+Transcription Auditor & Flags transcript typos \& mismatches & Chain-of-Thought (CoT) & JSON error list \\
+Dialect Verifier & Checks regional dialectal features & Few-Shot (1 per cluster) & Confidence + flag \\
+Critic Agent & Cross-validates \& resolves conflicts & 3-Sample Self-Consistency & Consensus \& uncertainty \\
+Summariser Agent & Computes metrics \& structures reports & Structured schema enforcement & Ranked JSON report \\
+\bottomrule
+\end{tabular}
+\caption{Systematic breakdown of conversational agent nodes, prompt strategies, and structural outputs within the DialectLoop pipeline.}
+\label{tab:agent_roles}
+\end{table}

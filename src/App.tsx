@@ -772,7 +772,7 @@ export default function App() {
                 </p>
               </div>
 
-              <PythonExporter />
+              <PythonExporter activeBatch={activeBatch} />
             </motion.div>
           )}
 

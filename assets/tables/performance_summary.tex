@@ -1,0 +1,20 @@
+% Performance Summary Matrix for DialectLoop
+% Formatted for standard ACL/NeurIPS LaTeX style using the booktabs package.
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Evaluation Metric} & \textbf{Pure Manual} & \textbf{GPT-4o Baseline} & \textbf{DialectLoop (Ours)} & \textbf{Improvement} \\
+\midrule
+Time per 1h Audio (hrs) & 14.2 & 8.6 & \textbf{3.1} & 78\% reduction \\
+Error Detection Rate (\%) & 71.0\% & 79.0\% & \textbf{91.0\%} & +12 pp over baseline \\
+Dialect Label Accuracy (\%) & 84.0\% & 78.0\% & \textbf{89.0\%} & +5 pp over manual \\
+Researcher Hours Saved (74h) & --- & 55.0 hrs & \textbf{81.0 hrs} & +26 hrs vs. GPT-4o \\
+Inter-Annotator Agreement ($\kappa$) & 0.74 & 0.71 & \textbf{0.86} & +0.12 Kappa gain \\
+\bottomrule
+\end{tabular}
+\caption{Comparative performance evaluation matrix of the manual QC workflow, single-agent baseline, and DialectLoop multi-agent system on the stratified Bengali validation set.}
+\label{tab:performance_summary}
+\end{table}
