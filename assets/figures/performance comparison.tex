@@ -1,0 +1,53 @@
+\documentclass{standalone}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\definecolor{manualcolor}{HTML}{94A3B8}   % Clean Slate Gray
+\definecolor{baselinecolor}{HTML}{6366F1} % Academic Indigo
+\definecolor{ourscolor}{HTML}{10B981}     % Clean Emerald Green
+
+\begin{document}
+\begin{tikzpicture}
+\begin{axis}[
+    ybar,
+    enlargelimits=0.15,
+    legend style={at={(0.98,0.98)},
+      anchor=north east,legend columns=1, draw=gray!40, rounded corners=2pt,
+      fill=white, font=\small, /tikz/every even column/.append style={column sep=0.6cm}},
+    legend cell align={left},
+    legend image code/.code={\draw[#1, draw=none] (0cm,-0.08cm) rectangle (0.35cm,0.12cm);},
+    ylabel={Performance Metrics},
+    symbolic x coords={Time (hrs/1h), Error Det. Rate (\%), Label Acc. (\%), Agreement ($\kappa \times 100$)},
+    xtick=data,
+    nodes near coords,
+    nodes near coords align={vertical},
+    every node near coord/.append style={font=\footnotesize\bfseries},
+    width=14cm,
+    height=9.5cm,
+    bar width=18pt,
+    axis x line*=bottom,
+    axis y line*=left,
+    ymajorgrids=true,
+    grid style={dashed,gray!30},
+    ymin=0, ymax=110,
+    title={\textbf{}},
+    title style={font=\large\sffamily, yshift=5pt},
+    tick label style={font=\small\sffamily},
+    label style={font=\small\sffamily}
+]
+    % Manual QC
+    \addplot[style={fill=manualcolor,draw=manualcolor!70!black,mark=none}]
+        coordinates {(Time (hrs/1h),14.2) (Error Det. Rate (\%),71) (Label Acc. (\%),84) (Agreement ($\kappa \times 100$),74)};
+        
+    % GPT-4o Single-Agent Baseline
+    \addplot[style={fill=baselinecolor,draw=baselinecolor!70!black,mark=none}]
+        coordinates {(Time (hrs/1h),8.6) (Error Det. Rate (\%),79) (Label Acc. (\%),78) (Agreement ($\kappa \times 100$),71)};
+        
+    % DialectLoop (Ours)
+    \addplot[style={fill=ourscolor,draw=ourscolor!70!black,mark=none}]
+        coordinates {(Time (hrs/1h),3.1) (Error Det. Rate (\%),91) (Label Acc. (\%),89) (Agreement ($\kappa \times 100$),86)};
+        
+    \legend{Legend: Manual QC, GPT-4o Baseline, DialectLoop (Ours)}
+\end{axis}
+\end{tikzpicture}
+\end{document}
