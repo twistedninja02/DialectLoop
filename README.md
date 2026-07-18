@@ -3,7 +3,7 @@
 > **A Multi-Agent LLM Workflow for Iterative Quality Control in Low-Resource Dialectal Speech Corpus Curation**  
 > *Author: Anuj Sarker (anujsarker02@gmail.com)*  
 > *Affiliation: Ahsanullah University of Science and Technology, Dhaka, Bangladesh*  
-> *Under Review / Accepted at AI4Research @ ICML 2026 Workshop · Track: Iterative Research Automation & Agents*
+> *Prepared / Submitted for the upcoming International Conference on Machine Learning (ICML) / Association for Computational Linguistics (ACL)*
 
 ---
 
@@ -272,11 +272,11 @@ Open **`http://localhost:3000`** in your browser.
 If you use DialectLoop's prompt strategies, statistical benchmarks, or evaluation code in your research, please cite:
 
 ```bibtex
-@inproceedings{sarker2026dialectloop,
+@inproceedings{sarker2027dialectloop,
   title={DialectLoop: A Multi-Agent LLM Workflow for Iterative Quality Control in Low-Resource Dialectal Speech Corpus Curation},
   author={Sarker, Anuj},
-  booktitle={ICML Workshop on Iterative Research Automation \& Agents},
-  year={2026},
+  booktitle={Prepared for International Conference on Machine Learning (ICML) / Association for Computational Linguistics (ACL)},
+  year={2027},
   url={https://github.com/your-username/dialectloop}
 }
 ```

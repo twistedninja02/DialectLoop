@@ -805,8 +805,8 @@ export default function App() {
                   </div>
                   <div>
                     <div className="text-[10px] uppercase font-mono text-slate-400 font-bold">Track Venue:</div>
-                    <div className="text-xs font-bold text-indigo-700">ICML 2026 Workshop</div>
-                    <div className="text-[10px] text-zinc-400 font-mono">Iterative Research Automation & Agents</div>
+                    <div className="text-xs font-bold text-indigo-700">ICML / ACL (Upcoming)</div>
+                    <div className="text-[10px] text-zinc-400 font-mono">Prepared for Main Conference Track</div>
                   </div>
                 </div>
               </div>
