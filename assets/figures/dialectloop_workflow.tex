@@ -1,144 +1,173 @@
-% TikZ Flowchart for DialectLoop Workflow Architecture
-% Suitable for ACL, NeurIPS, and ICML publication drafts.
-% Compile with pdflatex, xelatex, or lualatex.
-
-\documentclass[tikz,border=10pt]{standalone}
-\usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc}
+\documentclass{article}
+\usepackage[margin=0.4in, landscape]{geometry} 
+\usepackage{tikz}
+\usepackage[active,tightpage]{preview}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric, calc, fit, backgrounds}
+\PreviewEnvironment{tikzpicture}
+\setlength\PreviewBorder{8pt}
 
 \begin{document}
 
-\tikzset{
-    block/.style={
-        rectangle, 
-        draw=blue!70!black, 
-        fill=blue!5, 
-        thick, 
-        text width=4.5cm, 
-        align=center, 
-        rounded corners=4pt,
-        minimum height=1.2cm,
-        font=\sffamily\small
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    % Optimized vertical and horizontal spacing to fit within a 0.4in margin
+    node distance=1.35cm and 1.2cm,
+    % Compact process box styling to prevent margin overflow
+    box/.style={
+        rectangle,
+        draw,
+        rounded corners,
+        align=center,
+        minimum width=4.5cm,
+        minimum height=1.6cm,
+        inner sep=6pt,
+        font=\small,
+        thick
     },
-    agent/.style={
-        rectangle, 
-        draw=indigo!80!black, 
-        fill=indigo!5, 
-        thick, 
-        text width=4.5cm, 
-        align=center, 
-        rounded corners=4pt,
-        minimum height=1.2cm,
-        font=\sffamily\small\bfseries
+    % Light academic pastel coloring per structural tier
+    layer1/.style={draw=teal!60, fill=teal!5},       
+    layer2/.style={draw=blue!40, fill=blue!3},       
+    layer3/.style={draw=orange!50, fill=orange!6},   
+    layer4/.style={draw=purple!40, fill=purple!4},   
+    layer5/.style={draw=brown!50, fill=brown!6},     
+    layer6/.style={draw=olive!50, fill=olive!6},     
+    % Parameter metric verification condition blocks
+    condbox/.style={
+        rectangle,
+        draw=black!40,
+        fill=white,
+        rounded corners=3pt,
+        font=\footnotesize\bfseries,
+        inner sep=6pt,
+        align=center
     },
-    human/.style={
-        rectangle, 
-        draw=emerald!70!black, 
-        fill=emerald!5, 
-        thick, 
-        text width=4.5cm, 
-        align=center, 
-        rounded corners=4pt,
-        minimum height=1.2cm,
-        font=\sffamily\small\bfseries
+    % High-emphasis terminal nodes
+    emphasis/.style={
+        box,
+        line width=1.8pt,
+        fill=gray!12,
+        draw=black!70
     },
-    decision/.style={
-        diamond, 
-        draw=orange!80!black, 
-        fill=orange!5, 
-        thick, 
-        text width=2.5cm, 
-        align=center, 
-        inner sep=0pt,
-        font=\sffamily\small
-    },
-    line/.style={
-        draw, 
-        -{Stealth[scale=1.2]}, 
-        thick, 
-        color=slate!70!black
+    % Connector line style configuration
+    arrow/.style={-Latex, ultra thick, draw=black!60},
+    % Bounding enclosure properties
+    groupbox/.style={
+        draw=black!40,
+        dashed,
+        rounded corners,
+        line width=1.2pt,
+        inner sep=22pt
     }
-}
+]
 
-\begin{tikzpicture}[node distance=1.8cm, >=Stealth]
+% =====================================================================
+% PIPELINE LAYOUT
+% =====================================================================
 
-    % Nodes
-    \node (input) [block, draw=black!70, fill=black!2] {
-        \textbf{Input Segment Batch}\\
-        Transcripts \& District Metadata
-    };
-    
-    % Parallel Agents
-    \node (auditor) [agent, below left=1.2cm and 0.5cm of input] {
-        Transcription Auditor\\
-        \normalfont\small (Token-level typos)
-    };
-    
-    \node (verifier) [agent, below right=1.2cm and 0.5cm of input] {
-        Dialect Verifier\\
-        \normalfont\small (Regional speech cues)
-    };
-    
-    % Critic Agent
-    \node (critic) [agent, below=3.5cm of input, text width=5cm] {
-        Critic Agent\\
-        \normalfont\small (3-Sample self-consistency \& consensus)
-    };
-    
-    % Decision 1
-    \node (dec1) [decision, below=1.2cm of critic] {
-        Uncertainty\\$> 0.6$?
-    };
-    
-    % Human Gate 1
-    \node (gate1) [human, left=1.8cm of dec1] {
-        Human Gate \#1\\
-        \normalfont\small (Expert verification \& manual correction)
-    };
-    
-    % Summarizer
-    \node (summariser) [agent, below=1.5cm of dec1] {
-        Summariser Agent\\
-        \normalfont\small (Pattern analysis \& loop metrics)
-    };
-    
-    % Human Gate 2
-    \node (gate2) [human, below=1.2cm of summariser] {
-        Human Gate \#2\\
-        \normalfont\small (Researcher loop-approval)
-    };
-    
-    % Decision 2
-    \node (dec2) [decision, below=1.2cm of gate2] {
-        Error Rate\\$\le \tau$?
-    };
-    
-    % Output Success
-    \node (success) [block, draw=emerald!80!black, fill=emerald!2, below=1.2cm of dec2] {
-        \textbf{Success}\\
-        Commit Batch \& Advance
-    };
+% --- LEVEL 1: PRE-PROCESSING & INITIAL WORKFLOWS (4 Nodes Wide) ---
+\node (input) [box, layer1] at (0,0)
+{\large\textbf{Raw Speech Corpus}\\[4pt]
+Initial Audio Pipeline};
 
-    % Links
-    \path [line] (input) -| (auditor);
-    \path [line] (input) -| (verifier);
+\node (prep) [box, layer1] at (5.7,0) 
+{\large\textbf{Batch Preparation}\\[4pt]
+JSON Conversion};
+
+\node (audit) [box, layer2] at (11.4,0) 
+{\large\textbf{Transcription Auditor}\\[4pt]
+Checks Typos \& Disfluencies};
+
+\node (verify) [box, layer2] at (17.1,0) 
+{\large\textbf{Dialect Verifier}\\[4pt]
+Few-shot Classification};
+
+
+% --- LEVEL 2: RE-CENTERED INTERSECTION LAYER (3 Nodes Wide) ---
+\node (critic) [box, layer3] at (8.55,-3.0) 
+{\large\textbf{Critic Agent}\\[4pt]
+Computes Uncertainty Metrics};
+
+\node (human) [box, layer4] at (1.8,-3.0) 
+{\large\textbf{Human Gate Intercept}\\[4pt]
+Escalates Tasks if $\ge$ Threshold};
+
+\node (human_action) [box, layer4] at (15.3,-3.0) 
+{\large\textbf{Researcher Remediation}\\[4pt]
+Manual Validation Feed};
+
+
+% --- LEVEL 3: ANALYSIS & CRITERIA ASSESSMENT ---
+\node (summary) [box, layer5] at (1.8,-6.0) 
+{\large\textbf{Summariser Agent}\\[4pt]
+Error Percentage Computation};
+
+\node (gate) [box, layer6] at (8.55,-6.0) 
+{\large\textbf{Gate 2 Convergence}\\[4pt]
+Quality Threshold Verification};
+
+
+% --- LEVEL 4: TERMINAL DECISION WORKSPACES ---
+\node (requeue) [emphasis] at (1.8,-12.2) 
+{\large\textbf{Re-Queue Batch Cycle}\\[4pt]
+Prepend Outputs to Prompt};
+
+\node (complete) [emphasis] at (8.55,-12.2) 
+{\large\textbf{Batch Verified / Complete}\\[4pt]
+Final Structured Corpus Export};
+
+
+% =====================================================================
+% STRAIGHT, L-SHAPED, AND U-SHAPED ARROW PATHWAYS
+% =====================================================================
+
+% Level 1 transitions routed from box sides without crossing nodes
+\draw [arrow] (input.south) -- ++(0,-0.55) -| (human.north);
+\draw [arrow] (prep.south) -- ++(0,-0.55) -| (critic.north);
+\draw [arrow] (audit.south) -- ++(0,-0.55) -| (critic.north);
+\draw [arrow] (verify.south) -- ++(0,-0.55) -| (human_action.north);
+
+% Level 2 transitions using direct side connections
+\draw [arrow] (human.east) -- (critic.west);
+\draw [arrow] (human_action.west) -- (critic.east);
+\draw [arrow] (critic.south) -- (gate.north);
+\draw [arrow] (human.south) -- (summary.north);
+
+% Horizontal connection inside Evaluation Level 3
+\draw [arrow] (summary.east) -- (gate.west);
+
+% Side-routed decision paths that avoid condition boxes
+\draw [arrow] (summary.west) -- ++(-1.1,0) |- (requeue.west);
+\draw [arrow] (gate.east) -- ++(1.1,0) |- (complete.east);
+
+% =====================================================================
+% CONDITIONS & DECISION STAGE CONTAINER
+% =====================================================================
+
+% Condition block mapped to the vertex peak of the left outer loop
+\node (cond_requeue) [condbox, xshift=-1.55cm, yshift=0.1cm] at ($(summary.west)!0.5!(requeue.west)$) {
+    IF:\\
+    Batch Error Rate $> \tau$\\
+    AND Iteration $< 3$
+};
+
+% Condition block mapped to the vertex peak of the right outer loop
+\node (cond_complete) [condbox, xshift=1.55cm, yshift=0.1cm] at ($(gate.east)!0.5!(complete.east)$) {
+    ELSE:\\
+    Error Rate $\le \tau$\\
+    OR Iteration $= 3$
+};
+
+% Bounding background box safely wrapping all Terminal Level components
+\begin{scope}[on background layer]
+    \node (decision_group) [groupbox, fit=(requeue) (complete) (cond_requeue) (cond_complete)] {};
     
-    \path [line] (auditor) |- (critic);
-    \path [line] (verifier) |- (critic);
-    
-    \path [line] (critic) -- (dec1);
-    
-    \path [line] (dec1) -- node[anchor=south] {Yes} (gate1);
-    \path [line] (dec1) -- node[anchor=left] {No} (summariser);
-    \path [line] (gate1) |- (summariser);
-    
-    \path [line] (summariser) -- (gate2);
-    \path [line] (gate2) -- (dec2);
-    
-    \path [line] (dec2) -- node[anchor=left] {Yes} (success);
-    
-    % Loop Back path
-    \path [line] (dec2) -| node[anchor=south, near start] {No (Re-queue with edits)} ($(verifier.east) + (2.5cm, 0)$) |- (input);
+    % Header block positioned seamlessly over top boundary centerline
+    \node[fill=white, draw=black!40, rounded corners=4pt, inner sep=6pt, font=\large\bfseries\sffamily, text=black!90] 
+        at ($(decision_group.north)+(0,-0.28)$) {Decision Stage};
+\end{scope}
 
 \end{tikzpicture}
+\end{figure}
 
 \end{document}
