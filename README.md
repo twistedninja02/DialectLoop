@@ -281,8 +281,8 @@ If you use DialectLoop's prompt strategies, statistical benchmarks, or evaluatio
 @inproceedings{sarker2026dialectloop,
   title={DialectLoop: A Multi-Agent LLM Workflow for Iterative Quality Control in Low-Resource Dialectal Speech Corpus Curation},
   author={Sarker, Anuj},
-  booktitle={ICML Workshop on Iterative Research Automation \& Agents},
-  year={2026},
+  booktitle={Not submitted-ICML Workshop on Iterative Research Automation \& Agents},
+  year={202_},
   url={https://github.com/twistedninja02/dialectloop}
 }
 ```
