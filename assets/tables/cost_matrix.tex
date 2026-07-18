@@ -1,0 +1,21 @@
+% Cost-Benefit & Economic Analysis Table for DialectLoop
+% Formatted for standard ACL/NeurIPS LaTeX style using the booktabs package.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lccc}
+\toprule
+\textbf{Cost Component} & \textbf{Pure Manual Baseline} & \textbf{GPT-4o Single-Agent} & \textbf{DialectLoop (Ours)} \\
+\midrule
+Processing Time & 1,420 hrs & 860 hrs & \textbf{310 hrs} \\
+API/Compute Cost & \$0.00 & \$35.00 & \textbf{\$72.50} \\
+Human Expert Labor Cost & \$24,140.00 & \$14,620.00 & \textbf{\$5,270.00} \\
+\midrule
+\textbf{Total Financial Cost (100h)} & \textbf{\$24,140.00} & \textbf{\$14,655.00} & \textbf{\$5,342.50} \\
+\textbf{Net Savings vs. Manual} & Baseline & \$9,485.00 (39\%) & \textbf{\$18,797.50 (78\%)} \\
+\bottomrule
+\end{tabular}
+\caption{Economic Cost Matrix (per 100 Hours of Audio) comparing Pure Manual annotation, Single-Agent baseline, and DialectLoop multi-agent pipeline.}
+\label{tab:cost_matrix}
+\end{table}

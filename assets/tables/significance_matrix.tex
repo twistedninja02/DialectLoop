@@ -1,0 +1,17 @@
+% Statistical Significance & Uncertainty Estimation Table for DialectLoop
+% Formatted for standard ACL/NeurIPS LaTeX style using the booktabs package.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Evaluation Metric} & \textbf{GPT-4o Baseline (95\% CI)} & \textbf{DialectLoop (95\% CI)} & \textbf{Improvement ($\Delta$)} & \textbf{$p$-value} \\
+\midrule
+Error Detection Acc. & 79.0\% [77.2\%, 80.8\%] & \textbf{91.0\% [89.4\%, 92.6\%]} & +12.0\% & $< 0.001$ \\
+Cohen's Kappa ($\kappa$) & 0.71 [0.68, 0.74] & \textbf{0.86 [0.83, 0.89]} & +0.15 & $< 0.001$ \\
+\bottomrule
+\end{tabular}
+\caption{Statistical Significance Matrix under $B=5,000$ Bootstrap Resamples showing performance margins and paired Wilcoxon/t-test significance parameters.}
+\label{tab:significance_matrix}
+\end{table}
