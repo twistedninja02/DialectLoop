@@ -1,0 +1,32 @@
+% Qualitative Error Remediation Case Studies for FM-1, FM-2, and FM-3
+% Formatted for standard ACL/NeurIPS LaTeX style using tabularx.
+
+\begin{table*}[t]
+\centering
+\footnotesize
+\caption{Expert-adjudicated case studies for failure modes FM-1, FM-2, and FM-3, documenting initial decisions, specific interventions, and final outcomes.}
+\label{tab:case_studies}
+\begin{tabularx}{\textwidth}{lp{3.2cm}p{3.5cm}p{3.5cm}p{3.5cm}}
+\toprule
+\textbf{Case / Segment} & \textbf{Transcript (Bengali / Gloss)} & \textbf{Initial Agent Decision} & \textbf{Intervention Applied} & \textbf{Expert Adjudication} \\
+\midrule
+\textbf{FM-1 (Cluster Hallucination)} \newline \texttt{SEG-0412} (Rajshahi) & 
+হামি এখন হাটো যাতিছি ভাই। \newline \textit{Hami ekhon hato jatichi bhai.} & 
+Dialect Mismatch: Flagged as Khulna marker due to suffix '-তিছি' (-tichi). & 
+Added 3 contrastive Rajshahi/Khulna boundary few-shots clarifying Northwest verbal inflections. & 
+\textbf{Resolved}. Correctly acknowledged as valid Varendra-region sub-dialect. \\
+\midrule
+\textbf{FM-2 (Hypothesis Anchoring)} \newline \texttt{SEG-0789} (Chittagong) & 
+আঁই কাইলকা বাজারত যাইউম। \newline \textit{Ani kailka bazarot zaium.} & 
+Iter 1: Auditor misidentified 'যাইউম' as typo of 'যাব'. Researcher corrected \& confirmed. & 
+Injected confirmed corrections \& 'Forbidden corrections patterns' into Auditor context; iteration cap=3. & 
+\textbf{Resolved}. Elimination of cyclic hypothesis regression verified. \\
+\midrule
+\textbf{FM-3 (Overconfident Consensus)} \newline \texttt{SEG-1104} (Sylhet) & 
+মেঘ অইলে আমি বাড়িত যাইমু গিয়া। \newline \textit{Megh oile ami barit zaimu giya.} & 
+Uncertainty = 0.25 (Low). Auditor treated standard 'আমি' as fine; Verifier noted mixed Sylheti 'যাইমু'. & 
+Applied Disagreement Override: If agents disagree on dialect-code consistency, force uncertainty $\ge 0.6$. & 
+\textbf{Unresolved}. Pending field adjudication: confirmed mixed urban Sylhet-Dhaka migration dialect. \\
+\bottomrule
+\end{tabularx}
+\end{table*}

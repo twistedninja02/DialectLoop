@@ -10,6 +10,9 @@ dotenv.config();
 import { SAMPLE_SEGMENTS } from "./src/data";
 import { BatchRun, IterationReport, CriticDecision, AudioSegment } from "./src/types";
 import {
+  runTranscriptionAuditorBatch,
+  runDialectVerifierBatch,
+  runCriticAgentBatch,
   runTranscriptionAuditor,
   runDialectVerifier,
   runCriticAgent,
@@ -52,7 +55,7 @@ app.get("/api/config", (req, res) => {
   const isKeyActive = !!key && key !== "MY_GEMINI_API_KEY" && key.trim() !== "";
   res.json({
     hasApiKey: isKeyActive,
-    modelName: "gemini-3.5-flash",
+    modelName: "gemini-3.7-flash",
   });
 });
 
@@ -126,39 +129,36 @@ app.post("/api/batches/:batchId/run-agents", async (req, res) => {
   batch.status = "auditing";
 
   try {
-    const criticDecisions: CriticDecision[] = [];
-
-    // Process all segments sequentially/parallelly through the 3-agent pipeline
-    const pipelinePromises = batch.segments.map(async (segment) => {
-      // 1. Check if we have standard corrections already confirmed by researcher
+    // 1. Prepare segments with any confirmed corrections
+    const segmentsToEval = batch.segments.map(segment => {
       const hasCorrection = batch.confirmed_corrections[segment.segment_id];
-      const segmentToEval = {
+      return {
         ...segment,
         transcript: hasCorrection || segment.transcript
       };
-
-      // Extract previously confirmed corrections list to inject as system prompt context (Mitigation FM-2)
-      const confirmedList = Object.values(batch.confirmed_corrections);
-      const forbiddenPatterns = batch.iterations.flatMap(iter => iter.top_patterns);
-
-      // 2. Run Transcription Auditor
-      const auditorErrors = await runTranscriptionAuditor(segmentToEval, confirmedList, forbiddenPatterns);
-
-      // 3. Run Dialect Verifier
-      const verifierReport = await runDialectVerifier(segmentToEval);
-
-      // 4. Run Critic Agent (resolve conflicts, calculate uncertainty)
-      const criticDecision = await runCriticAgent(segmentToEval, auditorErrors, verifierReport);
-
-      // Preserve previously manually corrected transcript value if any exists
-      if (hasCorrection) {
-        criticDecision.researcher_correction = hasCorrection;
-      }
-
-      return criticDecision;
     });
 
-    const results = await Promise.all(pipelinePromises);
+    const confirmedList = Object.values(batch.confirmed_corrections);
+    const forbiddenPatterns = batch.iterations.flatMap(iter => iter.top_patterns);
+
+    // 2. Run Transcription Auditor in batch
+    const auditorErrorsMap = await runTranscriptionAuditorBatch(segmentsToEval, confirmedList, forbiddenPatterns);
+
+    // 3. Run Dialect Verifier in batch
+    const verifierReportsMap = await runDialectVerifierBatch(segmentsToEval);
+
+    // 4. Run Critic Agent in batch (resolve conflicts, calculate uncertainty)
+    const criticDecisionsMap = await runCriticAgentBatch(segmentsToEval, auditorErrorsMap, verifierReportsMap);
+
+    // Preserve previously manually corrected transcript value if any exists
+    const results: CriticDecision[] = segmentsToEval.map(seg => {
+      const decision = criticDecisionsMap[seg.segment_id];
+      const hasCorrection = batch.confirmed_corrections[seg.segment_id];
+      if (hasCorrection && decision) {
+        decision.researcher_correction = hasCorrection;
+      }
+      return decision;
+    }).filter(Boolean);
 
     // Save temporary decisions as part of an incomplete iteration report
     const activeIterationIdx = batch.current_iteration;

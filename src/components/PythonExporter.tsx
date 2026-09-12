@@ -16,7 +16,7 @@ in Low-Resource Dialectal Speech Corpus Curation.
 
 This script implements the four-agent pipeline (Transcription Auditor,
 Dialect Verifier, Critic, Summariser) with explicit human-in-the-loop gates,
-matching Anuj Sarker's research paper at ICML 2026.
+matching Anuj Sarker's research paper prepared for the upcoming ICML / ACL publication.
 
 Requirements:
     pip install google-genai pydantic
