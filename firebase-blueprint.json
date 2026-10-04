@@ -1,0 +1,46 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Represents an authenticated dialectology researcher or evaluator",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Unique user ID from Firebase Auth" },
+        "email": { "type": "string", "description": "User email address" },
+        "displayName": { "type": "string", "description": "User display name" },
+        "photoURL": { "type": "string", "description": "User avatar profile image URL" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "SavedEvaluationBatch": {
+      "title": "SavedEvaluationBatch",
+      "description": "Persisted evaluation runs and quality control batches created by user",
+      "type": "object",
+      "properties": {
+        "batch_id": { "type": "string" },
+        "name": { "type": "string" },
+        "userId": { "type": "string" },
+        "current_iteration": { "type": "number" },
+        "status": { "type": "string" },
+        "error_rate_threshold": { "type": "number" },
+        "segments": { "type": "array" },
+        "iterations": { "type": "array" },
+        "confirmed_corrections": { "type": "object" },
+        "cumulative_tokens": { "type": "object" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["batch_id", "name", "userId", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profile document storing basic identity"
+    },
+    "/users/{userId}/saved_batches/{batchId}": {
+      "schema": { "$ref": "#/entities/SavedEvaluationBatch" },
+      "description": "Personalized dialect evaluation runs saved by the user"
+    }
+  }
+}

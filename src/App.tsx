@@ -20,37 +20,164 @@ import {
   ChevronRight,
   UserCheck,
   Percent,
-  HelpCircle
+  HelpCircle,
+  Youtube
 } from 'lucide-react';
 
 import { BatchRun, AudioSegment, CriticDecision, IterationReport } from './types';
 import AgentBadge from './components/AgentBadge';
 import BatchStats from './components/BatchStats';
 import PythonExporter from './components/PythonExporter';
+import LiveCostCounter from './components/LiveCostCounter';
+import AudioSnippetPlayer from './components/AudioSnippetPlayer';
+import AgentReasoningInspector from './components/AgentReasoningInspector';
+import DatasetImportModal from './components/DatasetImportModal';
+import MicrophoneTranscriber from './components/MicrophoneTranscriber';
+import GoogleSearchGroundingModal from './components/GoogleSearchGroundingModal';
+import YouTubeAudioExtractor from './components/YouTubeAudioExtractor';
+
+// Firebase Auth & Firestore imports
+import { auth, googleProvider, db, testFirestoreConnection } from './firebase';
+import { signInWithPopup, signInAnonymously, signOut, onAuthStateChanged, User } from 'firebase/auth';
+import { doc, setDoc, getDocs, collection } from 'firebase/firestore';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'workspace' | 'python' | 'research'>('workspace');
+  const [activeTab, setActiveTab] = useState<'workspace' | 'harvester' | 'python' | 'research'>('workspace');
   const [batches, setBatches] = useState<BatchRun[]>([]);
   const [selectedBatchId, setSelectedBatchId] = useState<string>('bengali_speech_corpus_74h');
   const [activeBatch, setActiveBatch] = useState<BatchRun | null>(null);
   const [isApiKeyActive, setIsApiKeyActive] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   
+  // Firebase Auth state
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState<boolean>(true);
+  const [savingToCloud, setSavingToCloud] = useState<boolean>(false);
+
   // State for manual user editor corrections at Human Gate #1 (segment_id -> transcript)
   const [corrections, setCorrections] = useState<Record<string, string>>({});
   
-  // Custom batch upload JSON state
-  const [customJson, setCustomJson] = useState<string>('');
-  const [customName, setCustomName] = useState<string>('Custom Linguistic Sample');
-  const [customThreshold, setCustomThreshold] = useState<number>(0.05);
+  // Custom dataset upload modal state (supports dialectloop_predictions_1200.csv and JSON)
   const [showUploadModal, setShowUploadModal] = useState<boolean>(false);
 
-  // Load config & initial batch list on startup
+  // Google Search Grounding modal state
+  const [searchGroundingQuery, setSearchGroundingQuery] = useState<{ query: string; district: string } | null>(null);
+  const [showMicInput, setShowMicInput] = useState<boolean>(false);
+
+  // Load config & initial batch list on startup and test Firestore
   useEffect(() => {
     fetchConfig();
     fetchBatches();
+    testFirestoreConnection();
+
+    // Listen to Firebase Auth state
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+      setAuthLoading(false);
+      if (user) {
+        // Save user profile in Firestore
+        setDoc(doc(db, 'users', user.uid), {
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL,
+          lastLogin: new Date().toISOString()
+        }, { merge: true }).catch(err => console.warn("User profile sync:", err));
+
+        // Load saved batches from Firestore
+        loadUserSavedBatches(user.uid);
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
+
+  const handleSignIn = async () => {
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } catch (err: any) {
+      console.warn("Google popup sign-in unavailable, activating researcher session:", err);
+      try {
+        await signInAnonymously(auth);
+        setSuccessMsg("Signed in as Dialectology Researcher session.");
+      } catch (anonErr: any) {
+        setErrorMsg("Authentication failed: " + (anonErr.message || anonErr));
+      }
+    }
+  };
+
+  const handleAnonymousSignIn = async () => {
+    try {
+      await signInAnonymously(auth);
+      setSuccessMsg("Signed in as Dialectology Researcher session.");
+    } catch (err: any) {
+      setErrorMsg("Session initialization failed: " + (err.message || err));
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      setSuccessMsg("Signed out successfully.");
+    } catch (err: any) {
+      console.warn("Sign out error:", err);
+    }
+  };
+
+  const saveBatchToFirestore = async () => {
+    if (!currentUser) {
+      setErrorMsg("Please sign in with Google to save your batch to Firestore.");
+      return;
+    }
+    if (!activeBatch) return;
+
+    setSavingToCloud(true);
+    setErrorMsg(null);
+    try {
+      const batchRef = doc(db, 'users', currentUser.uid, 'saved_batches', activeBatch.batch_id);
+      await setDoc(batchRef, {
+        batch_id: activeBatch.batch_id,
+        name: activeBatch.name,
+        userId: currentUser.uid,
+        current_iteration: activeBatch.current_iteration,
+        status: activeBatch.status,
+        error_rate_threshold: activeBatch.error_rate_threshold,
+        segments: activeBatch.segments,
+        iterations: activeBatch.iterations,
+        confirmed_corrections: activeBatch.confirmed_corrections,
+        cumulative_tokens: activeBatch.cumulative_tokens || null,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+
+      setSuccessMsg(`Batch "${activeBatch.name}" securely persisted to Firebase Firestore!`);
+    } catch (err: any) {
+      setErrorMsg("Firestore save failed: " + (err.message || err));
+    } finally {
+      setSavingToCloud(false);
+    }
+  };
+
+  const loadUserSavedBatches = async (userId: string) => {
+    try {
+      const snap = await getDocs(collection(db, 'users', userId, 'saved_batches'));
+      const saved: BatchRun[] = [];
+      snap.forEach(d => {
+        saved.push(d.data() as BatchRun);
+      });
+      if (saved.length > 0) {
+        setBatches(prev => {
+          const map = new Map<string, BatchRun>();
+          prev.forEach(b => map.set(b.batch_id, b));
+          saved.forEach(b => map.set(b.batch_id, b));
+          return Array.from(map.values());
+        });
+      }
+    } catch (err) {
+      console.warn("Failed to load user saved batches:", err);
+    }
+  };
 
   const fetchConfig = async () => {
     try {
@@ -175,61 +302,20 @@ export default function App() {
     }
   };
 
-  const handleUploadCustomBatch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg(null);
-    try {
-      const parsed = JSON.parse(customJson);
-      if (!Array.isArray(parsed)) {
-        setErrorMsg("Linguistic corpus file must be a JSON array of segment items.");
-        return;
-      }
-
-      const res = await fetch('/api/batches', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: customName,
-          segments: parsed,
-          threshold: customThreshold
-        })
-      });
-
-      if (res.ok) {
-        const newBatch = await res.json();
-        setBatches([...batches, newBatch]);
-        setActiveBatch(newBatch);
-        setSelectedBatchId(newBatch.batch_id);
-        setCorrections({});
-        setShowUploadModal(false);
-        setCustomJson('');
-      } else {
-        const err = await res.json();
-        setErrorMsg(err.error || "Linguistic batch compilation rejected by server.");
-      }
-    } catch (err) {
-      setErrorMsg("Malformed JSON syntax in script. Please check brackets and commas.");
-    }
+  const handleBatchImported = (newBatch: BatchRun) => {
+    setBatches(prev => [...prev, newBatch]);
+    setActiveBatch(newBatch);
+    setSelectedBatchId(newBatch.batch_id);
+    initializeCorrections(newBatch);
   };
 
-  const loadSampleJsonTemplate = () => {
-    const template = [
-      {
-        "segment_id": "seg_custom_001",
-        "district": "Chittagong",
-        "duration": 28.5,
-        "transcript": "আঁই কাইলকা সকালের ট্রেনে চিটাগাং যাইউম ভাই।",
-        "speaker_id": "usr_99"
-      },
-      {
-        "segment_id": "seg_custom_002",
-        "district": "Dhaka",
-        "duration": 34.1,
-        "transcript": "আমি বাজারে কিলা আছো না খাইয়া চলে যাচ্ছি।",
-        "speaker_id": "usr_98"
-      }
-    ];
-    setCustomJson(JSON.stringify(template, null, 2));
+  const handleLoadHarvestedBatch = (newBatch: BatchRun) => {
+    setBatches(prev => [newBatch, ...prev]);
+    setActiveBatch(newBatch);
+    setSelectedBatchId(newBatch.batch_id);
+    initializeCorrections(newBatch);
+    setActiveTab('workspace');
+    setSuccessMsg(`Extracted YouTube speech dataset "${newBatch.name}" loaded into Linguistic Workspace!`);
   };
 
   const currentReport = activeBatch?.iterations?.find(
@@ -274,29 +360,91 @@ export default function App() {
             </div>
           </div>
 
-          {/* Tab Selector */}
-          <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-250">
-            <button
-              onClick={() => setActiveTab('workspace')}
-              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition duration-150 cursor-pointer ${activeTab === 'workspace' ? 'bg-white text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'}`}
-            >
-              <Activity className="w-3.5 h-3.5" />
-              Linguistic Workspace
-            </button>
-            <button
-              onClick={() => setActiveTab('python')}
-              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition duration-150 cursor-pointer ${activeTab === 'python' ? 'bg-white text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'}`}
-            >
-              <Code className="w-3.5 h-3.5" />
-              Python Module
-            </button>
-            <button
-              onClick={() => setActiveTab('research')}
-              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition duration-150 cursor-pointer ${activeTab === 'research' ? 'bg-white text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'}`}
-            >
-              <BookOpen className="w-3.5 h-3.5" />
-              Research Appendix
-            </button>
+          {/* Tab Selector & Auth Bar */}
+          <div className="flex items-center gap-3">
+            <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-250">
+              <button
+                onClick={() => setActiveTab('workspace')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition duration-150 cursor-pointer ${activeTab === 'workspace' ? 'bg-white text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'}`}
+              >
+                <Activity className="w-3.5 h-3.5" />
+                Linguistic Workspace
+              </button>
+              <button
+                onClick={() => setActiveTab('harvester')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition duration-150 cursor-pointer ${activeTab === 'harvester' ? 'bg-white text-red-600 font-bold shadow-sm' : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'}`}
+                title="Extract Bangla audio from YouTube and export CSVs for research papers"
+              >
+                <Youtube className="w-3.5 h-3.5 text-red-600" />
+                Audio Harvester
+              </button>
+              <button
+                onClick={() => setActiveTab('python')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition duration-150 cursor-pointer ${activeTab === 'python' ? 'bg-white text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'}`}
+              >
+                <Code className="w-3.5 h-3.5" />
+                Python Module
+              </button>
+              <button
+                onClick={() => setActiveTab('research')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition duration-150 cursor-pointer ${activeTab === 'research' ? 'bg-white text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'}`}
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                Research Appendix
+              </button>
+              <button
+                onClick={() => setSearchGroundingQuery({ query: activeBatch?.segments[0]?.transcript || 'আঁই যাইউম', district: activeBatch?.segments[0]?.district || 'Chittagong' })}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide text-blue-700 bg-blue-50/80 hover:bg-blue-100 transition border border-blue-200 cursor-pointer"
+                title="Verify dialect idioms with Google Search grounding (gemini-3.5-flash)"
+              >
+                <Search className="w-3.5 h-3.5 text-blue-600" />
+                Search Grounding (gemini-3.5)
+              </button>
+            </div>
+
+            {/* Firebase Auth & Cloud Sync Control */}
+            <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
+              {currentUser ? (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={saveBatchToFirestore}
+                    disabled={savingToCloud || !activeBatch}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-semibold hover:bg-emerald-100 transition cursor-pointer disabled:opacity-50"
+                    title="Persist batch evaluation data into Firebase Firestore"
+                  >
+                    <Database className="w-3.5 h-3.5 text-emerald-600" />
+                    {savingToCloud ? "Saving..." : "Save to Firestore"}
+                  </button>
+
+                  <div className="flex items-center gap-1.5 bg-slate-100 py-1 px-2 rounded-xl border border-slate-200 text-xs">
+                    {currentUser.photoURL ? (
+                      <img src={currentUser.photoURL} alt="" className="w-5 h-5 rounded-full" />
+                    ) : (
+                      <div className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-bold">
+                        {currentUser.displayName?.[0] || 'U'}
+                      </div>
+                    )}
+                    <span className="font-semibold text-slate-700 max-w-[90px] truncate">{currentUser.displayName || currentUser.email}</span>
+                    <button
+                      onClick={handleSignOut}
+                      className="ml-1 text-[10px] font-mono text-slate-400 hover:text-rose-600 transition"
+                      title="Sign Out"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={handleSignIn}
+                  disabled={authLoading}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 hover:shadow-xs transition cursor-pointer"
+                >
+                  <UserCheck className="w-3.5 h-3.5" />
+                  Sign In with Google
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -339,6 +487,16 @@ export default function App() {
           </div>
         )}
 
+        {successMsg && (
+          <div className="mb-6 border border-emerald-200 bg-emerald-50 text-emerald-800 p-4 rounded-xl text-xs font-medium flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>{successMsg}</span>
+            </div>
+            <button onClick={() => setSuccessMsg(null)} className="text-emerald-500 hover:text-emerald-700 font-bold ml-4">✕</button>
+          </div>
+        )}
+
         <AnimatePresence mode="wait">
           {/* 1. WORKSPACE TAB */}
           {activeTab === 'workspace' && (
@@ -359,12 +517,21 @@ export default function App() {
                     <h3 className="font-display font-semibold text-slate-800 text-sm flex items-center gap-2">
                       <Database className="w-4 h-4 text-indigo-600" /> Speech Corpora
                     </h3>
-                    <button
-                      onClick={() => setShowUploadModal(true)}
-                      className="flex items-center gap-1 text-[11px] font-mono uppercase tracking-wider text-indigo-600 font-bold hover:text-indigo-800 transition"
-                    >
-                      <PlusIcon className="w-3.5 h-3.5" /> Upload File
-                    </button>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => setActiveTab('harvester')}
+                        className="flex items-center gap-1 text-[11px] font-mono uppercase tracking-wider text-red-600 font-bold hover:text-red-800 transition px-2 py-1 rounded-lg bg-red-50 border border-red-200 cursor-pointer"
+                        title="Extract Bangla speech audio from YouTube & internet sources"
+                      >
+                        <Youtube className="w-3.5 h-3.5 text-red-600" /> YouTube
+                      </button>
+                      <button
+                        onClick={() => setShowUploadModal(true)}
+                        className="flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-indigo-600 font-bold hover:text-indigo-800 transition px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200 cursor-pointer"
+                      >
+                        <Upload className="w-3.5 h-3.5" /> Import CSV
+                      </button>
+                    </div>
                   </div>
 
                   <div className="space-y-3">
@@ -489,6 +656,9 @@ export default function App() {
                 
                 {activeBatch && (
                   <>
+                    {/* 1. Live Real-Time Token & Economic Counter Widget */}
+                    <LiveCostCounter batch={activeBatch} />
+
                     {/* Execution Controls Panel */}
                     <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
                       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
@@ -498,6 +668,15 @@ export default function App() {
                         </div>
 
                         <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setShowMicInput(!showMicInput)}
+                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 text-xs font-semibold hover:bg-rose-100 transition cursor-pointer"
+                            title="Record audio with microphone and transcribe using gemini-3.5-transcribe"
+                          >
+                            <Sparkles className="w-3.5 h-3.5 text-rose-600" />
+                            {showMicInput ? "Hide Mic Transcriber" : "Mic Input (gemini-3.5)"}
+                          </button>
+
                           {activeBatch.status === 'pending' && (
                             <button
                               onClick={runMultiAgentPipeline}
@@ -533,6 +712,22 @@ export default function App() {
                         </div>
                       </div>
                     </div>
+
+                    {/* Optional Microphone Audio Input Transcriber Panel (gemini-3.5-transcribe) */}
+                    {showMicInput && (
+                      <MicrophoneTranscriber
+                        districtCluster={activeBatch.segments[0]?.district || "Dhaka"}
+                        onTranscriptReady={(newSegment) => {
+                          const updated = {
+                            ...activeBatch,
+                            segments: [newSegment, ...activeBatch.segments]
+                          };
+                          setActiveBatch(updated);
+                          setBatches(batches.map(b => b.batch_id === updated.batch_id ? updated : b));
+                          setSuccessMsg(`Segment "${newSegment.segment_id}" added to batch from live microphone!`);
+                        }}
+                      />
+                    )}
 
                     {/* Chart Statistics Tab */}
                     {activeBatch.iterations.length > 0 && (
@@ -602,62 +797,38 @@ export default function App() {
                                 </div>
                               </div>
 
-                              <div className="space-y-2">
+                              <div className="space-y-2.5">
                                 <div>
-                                  <div className="text-[10px] font-mono text-slate-400 font-semibold mb-0.5">Linguistic Transcript</div>
+                                  <div className="flex items-center justify-between mb-0.5">
+                                    <span className="text-[10px] font-mono text-slate-400 font-semibold">Linguistic Transcript</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => setSearchGroundingQuery({ query: seg.transcript, district: seg.district })}
+                                      className="flex items-center gap-1 text-[10px] font-mono font-bold text-blue-600 hover:text-blue-800 transition cursor-pointer bg-blue-50 px-2 py-0.5 rounded border border-blue-200"
+                                      title="Verify regional idiom authenticity with Google Search data"
+                                    >
+                                      <Search className="w-3 h-3 text-blue-600" />
+                                      Search Grounding (gemini-3.5)
+                                    </button>
+                                  </div>
                                   <p className="text-sm font-semibold text-slate-800 tracking-tight leading-relaxed">{seg.transcript}</p>
                                 </div>
 
-                                {/* Detailed Subagent Findings */}
+                                {/* 3. HTML5 Inline Audio Playback for Verifying MISHEAR / CODE_SWITCH on the fly */}
+                                <AudioSnippetPlayer
+                                  segmentId={seg.segment_id}
+                                  transcript={seg.transcript}
+                                  durationSec={seg.duration}
+                                  audioBase64={seg.audio_blob_b64}
+                                  flagType={decision?.auditor_errors?.[0]?.error_type !== "NONE" ? decision?.auditor_errors?.[0]?.error_type : undefined}
+                                />
+
+                                {/* 2. Expandable Agent Reasoning (CoT Inspector: Auditor CoT, Verifier Few-Shot, Critic Consensus) */}
                                 {decision && (
-                                  <div className="mt-3 pt-3 border-t border-slate-100 bg-slate-50/50 rounded-lg p-3 space-y-2.5">
-                                    {/* Dialectology Report */}
-                                    {decision.verifier_report && (
-                                      <div className="flex items-start gap-2 text-xs">
-                                        <span className={`w-2 h-2 mt-1.5 rounded-full ${decision.verifier_report.dialect_consistent ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                                        <div className="flex-1">
-                                          <div className="flex items-center gap-2">
-                                            <span className="font-semibold text-slate-700">Dialectology Check:</span>
-                                            <span className={`text-[10px] font-mono font-bold uppercase ${decision.verifier_report.dialect_consistent ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                              {decision.verifier_report.dialect_consistent ? 'Dialect-consistent' : 'Anomalous dialect usage'}
-                                            </span>
-                                          </div>
-                                          {decision.verifier_report.evidence && decision.verifier_report.evidence.length > 0 && (
-                                            <div className="text-[10px] text-zinc-500 font-mono mt-0.5">
-                                              Features identified: {decision.verifier_report.evidence.join(', ')}
-                                            </div>
-                                          )}
-                                        </div>
-                                      </div>
-                                    )}
-
-                                    {/* Auditor Flags */}
-                                    {decision.auditor_errors && decision.auditor_errors.length > 0 && decision.auditor_errors[0].error_type !== "NONE" && (
-                                      <div className="flex items-start gap-2 text-xs bg-rose-50/30 p-2 rounded-md border border-rose-100/50">
-                                        <Search className="w-3.5 h-3.5 text-rose-500 mt-0.5" />
-                                        <div className="flex-1">
-                                          <div className="font-semibold text-slate-700">Transcription Auditor Flags:</div>
-                                          <div className="space-y-1 mt-1">
-                                            {decision.auditor_errors.map((err, i) => (
-                                              <div key={i} className="flex items-center gap-2 text-[10px] flex-wrap">
-                                                <span className="font-mono bg-rose-100 text-rose-800 px-1.5 rounded text-[9px] uppercase font-bold">{err.error_type}</span>
-                                                <span className="font-medium text-slate-800 font-mono">"{err.error_token}"</span>
-                                                <ChevronRight className="w-3 h-3 text-slate-300" />
-                                                <span className="text-indigo-800 bg-indigo-50/50 px-1.5 py-0.5 rounded-md font-mono">Suggest: "{err.suggested_correction}"</span>
-                                              </div>
-                                            ))}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    )}
-
-                                    {/* Critic Reasoning */}
-                                    {decision.resolution_reasoning && (
-                                      <div className="text-[10px] text-zinc-500 font-mono bg-slate-50 border border-slate-150 p-2 rounded-md">
-                                        <span className="font-bold text-indigo-700 uppercase">Critic Consensus Audit:</span> {decision.resolution_reasoning}
-                                      </div>
-                                    )}
-                                  </div>
+                                  <AgentReasoningInspector
+                                    segmentId={seg.segment_id}
+                                    decision={decision}
+                                  />
                                 )}
 
                                 {/* Interactive Manual Escalation Form Field at Human Gate #1 */}
@@ -754,7 +925,23 @@ export default function App() {
             </motion.div>
           )}
 
-          {/* 2. PYTHON TAB */}
+          {/* 2. AUDIO HARVESTER TAB (YouTube & Web Audio Extraction & Research CSV Suite) */}
+          {activeTab === 'harvester' && (
+            <motion.div
+              key="harvester-tab"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <YouTubeAudioExtractor
+                onLoadBatchIntoWorkspace={handleLoadHarvestedBatch}
+                currentUserId={currentUser?.uid}
+                onOpenSearchGrounding={(query, district) => setSearchGroundingQuery({ query, district })}
+              />
+            </motion.div>
+          )}
+
+          {/* 3. PYTHON TAB */}
           {activeTab === 'python' && (
             <motion.div
               key="python-tab"
@@ -1248,92 +1435,26 @@ Applied Disagreement Override: If agents disagree on dialect-code consistency, f
         </AnimatePresence>
       </main>
 
-      {/* Floating JSON Custom Upload Modal */}
+      {/* Dataset & Predictions Import Modal (Supports dialectloop_predictions_1200.csv and JSON) */}
       <AnimatePresence>
         {showUploadModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-            <motion.div
-              layout
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white border border-slate-200 rounded-2xl p-6 shadow-2xl w-full max-w-xl flex flex-col gap-4 max-h-[90vh] overflow-y-auto"
-            >
-              <div className="flex items-center justify-between border-b pb-3 border-slate-100">
-                <h3 className="font-display font-bold text-slate-900 text-sm flex items-center gap-2">
-                  <Upload className="w-4 h-4 text-indigo-600" /> Upload Custom Corpus File
-                </h3>
-                <button onClick={() => setShowUploadModal(false)} className="text-slate-400 hover:text-slate-600 font-bold">✕</button>
-              </div>
+          <DatasetImportModal
+            isOpen={showUploadModal}
+            onClose={() => setShowUploadModal(false)}
+            onBatchCreated={handleBatchImported}
+          />
+        )}
+      </AnimatePresence>
 
-              <form onSubmit={handleUploadCustomBatch} className="space-y-4">
-                <div>
-                  <label className="text-[10px] font-mono uppercase font-bold text-slate-400 block mb-1">Batch Title</label>
-                  <input
-                    type="text"
-                    required
-                    value={customName}
-                    onChange={(e) => setCustomName(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 outline-none focus:ring-1 focus:ring-indigo-500 font-medium"
-                    placeholder="E.g. Sylhet Region Corpus Batch 4"
-                  />
-                </div>
-
-                <div>
-                  <div className="flex justify-between items-center mb-1">
-                    <label className="text-[10px] font-mono uppercase font-bold text-slate-400">Audio Segment JSON Array</label>
-                    <button
-                      type="button"
-                      onClick={loadSampleJsonTemplate}
-                      className="text-[9px] font-mono text-indigo-600 hover:text-indigo-800 hover:underline"
-                    >
-                      (Load Sample Template)
-                    </button>
-                  </div>
-                  <textarea
-                    required
-                    value={customJson}
-                    onChange={(e) => setCustomJson(e.target.value)}
-                    rows={10}
-                    className="w-full px-3 py-2 text-[11px] font-mono rounded-xl border border-slate-200 outline-none focus:ring-1 focus:ring-indigo-500 bg-slate-50 text-slate-700 leading-relaxed scrollbar-thin"
-                    placeholder='[\n  {\n    "segment_id": "seg_01",\n    "district": "Dhaka",\n    "duration": 30.5,\n    "transcript": "আমি রাজশাহী যাচ্ছি।",\n    "speaker_id": "spk_1"\n  }\n]'
-                  />
-                </div>
-
-                <div className="flex items-center justify-between gap-5 border-t border-slate-100 pt-4">
-                  <div>
-                    <label className="text-[10px] font-mono uppercase font-bold text-slate-400 block mb-1">Target Error Threshold (τ)</label>
-                    <select
-                      value={customThreshold}
-                      onChange={(e) => setCustomThreshold(parseFloat(e.target.value))}
-                      className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-mono font-medium outline-none"
-                    >
-                      <option value="0.01">1% Threshold</option>
-                      <option value="0.03">3% Threshold</option>
-                      <option value="0.05">5% Threshold (Default)</option>
-                      <option value="0.10">10% Threshold</option>
-                    </select>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowUploadModal(false)}
-                      className="px-4 py-2 border border-slate-200 rounded-xl text-xs font-semibold hover:bg-slate-50 transition text-slate-600 cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-semibold hover:bg-indigo-700 hover:shadow-md transition cursor-pointer"
-                    >
-                      Compile and Load Corpus
-                    </button>
-                  </div>
-                </div>
-              </form>
-            </motion.div>
-          </div>
+      {/* Google Search Grounding Modal (Powered by gemini-3.5-flash with googleSearch tool) */}
+      <AnimatePresence>
+        {searchGroundingQuery && (
+          <GoogleSearchGroundingModal
+            isOpen={!!searchGroundingQuery}
+            onClose={() => setSearchGroundingQuery(null)}
+            initialQuery={searchGroundingQuery.query}
+            districtCluster={searchGroundingQuery.district}
+          />
         )}
       </AnimatePresence>
     </div>

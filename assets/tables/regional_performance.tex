@@ -1,0 +1,31 @@
+% Regional Performance Analysis Table for DialectLoop
+% Measured across N=1,200 stratified Bengali speech segments.
+% Formatted for standard ACL/NeurIPS/ICML LaTeX style using the booktabs package.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Regional transcription error detection performance ($F_1$ score) disaggregated by dialect cluster across $N=1{,}200$ stratified speech segments. Baseline Error Density and Human Escalation Rate are unlogged in the prediction schema and cannot be empirically evaluated from these data.}
+\label{tab:regional_performance}
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Dialect Cluster} & \textbf{$N_c$} & \textbf{Weight ($w_c$)} & \textbf{Baseline Error Density} & \textbf{Single-Agent $F_1$} & \textbf{DialectLoop $F_1$} & \textbf{Human Escalation} \\
+& & & (errors / 1k words) & (\%) & (\%) & Rate (\%) \\
+\midrule
+Chittagong / Southeast & 280 & 0.2333 & ---$^a$ & 77.9\% & \textbf{94.1\%} & ---$^b$ \\
+Sylhet / Northeast     & 240 & 0.2000 & ---$^a$ & 75.0\% & \textbf{90.9\%} & ---$^b$ \\
+Khulna / Southwest     & 210 & 0.1750 & ---$^a$ & 73.1\% & \textbf{93.3\%} & ---$^b$ \\
+Rajshahi / Northwest   & 220 & 0.1833 & ---$^a$ & 72.7\% & \textbf{87.2\%} & ---$^b$ \\
+Dhaka / Central        & 250 & 0.2083 & ---$^a$ & 60.0\% & \textbf{88.9\%} & ---$^b$ \\
+\midrule
+\textbf{Weighted Mean ($\sum w_c F_{1,c}$)} & \textbf{1,200} & \textbf{1.0000} & ---$^a$ & 71.8\% & \textbf{91.0\%} & ---$^b$ \\
+\textbf{Pooled Overall ($F_{1,\mathrm{pooled}}$)} & \textbf{1,200} & --- & ---$^a$ & 73.2\% & \textbf{91.5\%} & ---$^b$ \\
+\bottomrule
+\end{tabular}
+\vspace{1ex}
+\parbox{\linewidth}{\footnotesize
+\textit{Notes on Evidence Status:} \\
+$^a$ \textbf{Missing Word Counts:} Baseline Error Density requires tokenized reference word counts and localized error annotations per segment; binary segment-level presence (\texttt{has\_error\_gt}) cannot supply this metric. \\
+$^b$ \textbf{Untested Escalation Hypothesis:} Human Gate \#1 referral telemetry and Critic uncertainty scores ($u$) are not present in the prediction logs; regional escalation differences cannot be inferred from predicted error labels alone.
+}
+\end{table}

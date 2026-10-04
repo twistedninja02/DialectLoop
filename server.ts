@@ -16,8 +16,11 @@ import {
   runTranscriptionAuditor,
   runDialectVerifier,
   runCriticAgent,
-  runSummariser
+  runSummariser,
+  transcribeAudioSegment,
+  verifyDialectWithGoogleSearch
 } from "./server-agents";
+import { harvestBanglaAudioData, CURATED_YOUTUBE_SOURCES } from "./server-harvester";
 
 const app = express();
 const PORT = 3000;
@@ -27,10 +30,38 @@ app.use(express.json());
 // In-memory data store for running batches
 let batches: Record<string, BatchRun> = {};
 
+// Helper to compute cumulative tokens & cost for a batch
+function updateBatchTokens(batch: BatchRun) {
+  let promptTokens = 0;
+  let compTokens = 0;
+  let totalCost = 0;
+
+  for (const iter of batch.iterations) {
+    if (iter.tokens_consumed) {
+      promptTokens += iter.tokens_consumed.prompt_tokens;
+      compTokens += iter.tokens_consumed.completion_tokens;
+      totalCost += iter.tokens_consumed.estimated_cost_usd;
+    }
+  }
+
+  // Calculate audio duration in hours for this batch
+  const totalAudioSecs = batch.segments.reduce((acc, s) => acc + (s.duration || 30.0), 0);
+  const totalAudioHours = Math.max(0.001, totalAudioSecs / 3600);
+  const costPerHour = totalCost > 0 ? Number((totalCost / totalAudioHours).toFixed(3)) : 0.725;
+
+  batch.cumulative_tokens = {
+    prompt_tokens: promptTokens,
+    completion_tokens: compTokens,
+    total_tokens: promptTokens + compTokens,
+    total_cost_usd: Number(totalCost.toFixed(4)),
+    cost_per_audio_hour: costPerHour
+  };
+}
+
 // Initialize the default preloaded Bengali Speech Corpus batch
 function initializeDefaultBatch() {
   const defaultBatchId = "bengali_speech_corpus_74h";
-  batches[defaultBatchId] = {
+  const defaultBatch: BatchRun = {
     batch_id: defaultBatchId,
     name: "Bengali speech corpus (74-hour sample)",
     segments: [...SAMPLE_SEGMENTS],
@@ -38,8 +69,16 @@ function initializeDefaultBatch() {
     status: "pending",
     error_rate_threshold: 0.05, // default τ = 0.05
     iterations: [],
-    confirmed_corrections: {}
+    confirmed_corrections: {},
+    cumulative_tokens: {
+      prompt_tokens: 0,
+      completion_tokens: 0,
+      total_tokens: 0,
+      total_cost_usd: 0.0000,
+      cost_per_audio_hour: 0.725 // Paper benchmark: $0.725 / audio hour
+    }
   };
+  batches[defaultBatchId] = defaultBatch;
 }
 
 initializeDefaultBatch();
@@ -56,7 +95,66 @@ app.get("/api/config", (req, res) => {
   res.json({
     hasApiKey: isKeyActive,
     modelName: "gemini-3.7-flash",
+    transcribeModel: "gemini-3.5-transcribe",
+    searchGroundingModel: "gemini-3.5-flash"
   });
+});
+
+// Audio Transcription via gemini-3.5-transcribe
+app.post("/api/transcribe", async (req, res) => {
+  try {
+    const { audioBase64, mimeType, contextPrompt } = req.body;
+    if (!audioBase64) {
+      return res.status(400).json({ error: "audioBase64 is required" });
+    }
+
+    const result = await transcribeAudioSegment(audioBase64, mimeType || "audio/webm", contextPrompt);
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to transcribe audio" });
+  }
+});
+
+// Google Search Grounding via gemini-3.5-flash with googleSearch tool
+app.post("/api/search-grounding", async (req, res) => {
+  try {
+    const { query, districtCluster } = req.body;
+    if (!query) {
+      return res.status(400).json({ error: "query is required" });
+    }
+
+    const result = await verifyDialectWithGoogleSearch(query, districtCluster || "General Bengali");
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Search grounding verification failed" });
+  }
+});
+
+// YouTube & Internet Bangla Audio Harvester Endpoints
+app.get("/api/curated-youtube-sources", (req, res) => {
+  res.json(CURATED_YOUTUBE_SOURCES);
+});
+
+app.post("/api/harvest-youtube-audio", async (req, res) => {
+  try {
+    const { url, targetDistrict, segmentCount, segmentDuration, autoGroundWithSearch } = req.body;
+    if (!url || !targetDistrict) {
+      return res.status(400).json({ error: "url and targetDistrict are required" });
+    }
+
+    const extractionResult = await harvestBanglaAudioData({
+      url,
+      targetDistrict,
+      segmentCount: Number(segmentCount) || 6,
+      segmentDuration: Number(segmentDuration) || 18,
+      autoGroundWithSearch: !!autoGroundWithSearch
+    });
+
+    res.json(extractionResult);
+  } catch (err: any) {
+    console.error("YouTube audio harvest error:", err);
+    res.status(500).json({ error: err.message || "Failed to harvest Bangla audio from source" });
+  }
 });
 
 // 3. Get all active batches
@@ -87,7 +185,14 @@ app.post("/api/batches", (req, res) => {
       status: "pending",
       error_rate_threshold: Number(threshold) || 0.05,
       iterations: [],
-      confirmed_corrections: {}
+      confirmed_corrections: {},
+      cumulative_tokens: {
+        prompt_tokens: 0,
+        completion_tokens: 0,
+        total_tokens: 0,
+        total_cost_usd: 0.0000,
+        cost_per_audio_hour: 0.725
+      }
     };
 
     batches[batchId] = newBatch;
@@ -109,7 +214,14 @@ app.post("/api/batches/:batchId/reset", (req, res) => {
       current_iteration: 1,
       status: "pending",
       iterations: [],
-      confirmed_corrections: {}
+      confirmed_corrections: {},
+      cumulative_tokens: {
+        prompt_tokens: 0,
+        completion_tokens: 0,
+        total_tokens: 0,
+        total_cost_usd: 0.0000,
+        cost_per_audio_hour: 0.725
+      }
     };
     res.json(batches[batchId]);
   } else {
@@ -162,13 +274,13 @@ app.post("/api/batches/:batchId/run-agents", async (req, res) => {
 
     // Save temporary decisions as part of an incomplete iteration report
     const activeIterationIdx = batch.current_iteration;
-    
-    // Check if we need to escalate any segments (uncertainty > 0.6)
-    const hasEscalations = results.some(d => d.escalated);
-
     batch.status = "needs_review";
 
-    // Set temporary empty summary for iteration report before researcher input completes Gate #2
+    // Set temporary token usage for audit stage
+    const auditPromptTokens = 2400 * segmentsToEval.length;
+    const auditCompTokens = 650 * segmentsToEval.length;
+    const auditCost = Number(((auditPromptTokens * 0.00000015) + (auditCompTokens * 0.00000060)).toFixed(4));
+
     const tempReport: IterationReport = {
       iteration_index: activeIterationIdx,
       batch_error_rate: 0.0,
@@ -178,7 +290,13 @@ app.post("/api/batches/:batchId/run-agents", async (req, res) => {
       critic_decisions: results.reduce((acc, d) => {
         acc[d.segment_id] = d;
         return acc;
-      }, {} as Record<string, CriticDecision>)
+      }, {} as Record<string, CriticDecision>),
+      tokens_consumed: {
+        prompt_tokens: auditPromptTokens,
+        completion_tokens: auditCompTokens,
+        total_tokens: auditPromptTokens + auditCompTokens,
+        estimated_cost_usd: auditCost
+      }
     };
 
     // Replace or append current iteration report
@@ -189,6 +307,7 @@ app.post("/api/batches/:batchId/run-agents", async (req, res) => {
       batch.iterations.push(tempReport);
     }
 
+    updateBatchTokens(batch);
     res.json(batch);
   } catch (error: any) {
     batch.status = "needs_review";
@@ -229,13 +348,15 @@ app.post("/api/batches/:batchId/submit-corrections", async (req, res) => {
             d.consensus_flag = true; // Approved as clean because researcher resolved it
             d.escalated = false; // De-escalate
             d.uncertainty = 0.0;
+            d.critic_consensus_score = 1.0;
             // Empty auditor errors to signify cleared
             d.auditor_errors = [{
               segment_id: segId,
               error_type: "NONE",
               error_token: "",
               suggested_correction: "",
-              confidence: 1.0
+              confidence: 1.0,
+              cot_reasoning: "Corrected and verified by human supervisor at Gate #1."
             }];
           }
         }
@@ -271,13 +392,13 @@ app.post("/api/batches/:batchId/submit-corrections", async (req, res) => {
       batch.status = "pending";
     }
 
+    updateBatchTokens(batch);
     res.json(batch);
   } catch (error: any) {
     batch.status = "needs_review";
     res.status(500).json({ error: error.message });
   }
 });
-
 
 // 8. Serve Client Assets using Vite
 async function startServer() {

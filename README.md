@@ -254,12 +254,33 @@ human-grade reliability is $\kappa\geq0.80$.
 
 > **Raw LaTeX.** The standalone booktabs source is available at
 > [`assets/tables/performance_summary.tex`](./assets/tables/performance_summary.tex).
+> The accompanying TikZ publication bar chart source is available at
+> [`assets/figures/performance_comparison.tex`](./assets/figures/performance_comparison.tex).
 
 Qualitatively, the paper reports that the Critic resolved 94% of
 Auditor--Verifier disagreements without escalation across 12 iterations. About
 11% of segments required researcher review. Summaries were considered
 actionable in 10 of 12 iterations, and expert agreement with DialectLoop's
 flagged corrections was 89.4% on the validation set.
+
+## Regional performance analysis
+
+Disaggregated evaluation across the five dialect clusters ($N=1{,}200$) reveals consistent error-detection $F_1$ improvements across all regional varieties:
+
+| Dialect cluster | $N_c$ | Weight ($w_c$) | Single-Agent $F_1$ | DialectLoop $F_1$ | $\Delta F_1$ | Escalation rate |
+|---|---:|---:|---:|---:|---:|:---:|
+| Chittagong / Southeast | 280 | 0.2333 | 77.89% | **94.12%** | +16.23 pp | ---* |
+| Sylhet / Northeast | 240 | 0.2000 | 75.00% | **90.91%** | +15.91 pp | ---* |
+| Khulna / Southwest | 210 | 0.1750 | 73.08% | **93.33%** | +20.25 pp | ---* |
+| Rajshahi / Northwest | 220 | 0.1833 | 72.73% | **87.18%** | +14.45 pp | ---* |
+| Dhaka / Central | 250 | 0.2083 | 60.00% | **88.89%** | +28.89 pp | ---* |
+| **Weighted Mean ($\sum w_c F_{1,c}$)** | **1,200** | **1.0000** | **71.80%** | **90.98%** | **+19.18 pp** | ---* |
+| **Pooled Overall ($F_{1,\text{pooled}}$)** | **1,200** | --- | **73.17%** | **91.54%** | **+18.37 pp** | ---* |
+
+*\*Note on evidence status: Baseline Error Density (word-normalized) and Human Escalation Rate are unlogged in the prediction schema and cannot be computed from binary classification logs alone. The hypothesis regarding differential human escalation remains untested.*
+
+> **Raw LaTeX.** The standalone booktabs source is available at
+> [`assets/tables/regional_performance.tex`](./assets/tables/regional_performance.tex).
 
 ## Statistical significance and uncertainty
 
@@ -388,6 +409,18 @@ python -m src.dialectloop run \
 # Recompute tables, paired tests, and vector figures.
 python scripts/evaluate.py --predictions predictions/ --bootstrap 10000
 ```
+
+## Bangla Audio Data Harvester (YouTube & Web Sources)
+
+DialectLoop provides an integrated audio extraction and corpus generation suite accessible via the **Audio Harvester** tab:
+1. **YouTube & Web Ingestion:** Extracts low-resource regional Bengali spoken audio from YouTube links or direct audio streams.
+2. **Segmentation & Orthographic Transcription:** Slices media into time-aligned speech segments (`timestamp_start` to `timestamp_end`), extracting authentic dialectal tokens using `gemini-3.5-transcribe`.
+3. **Google Search Grounding:** Queries online linguistic archives and regional dialect glossaries with `gemini-3.5-flash` (`googleSearch` tool) to verify rare dialect idioms.
+4. **Research Paper CSV & LaTeX Export:**
+   - **Speech Corpus Metadata CSV:** Includes segment timing, speaker ID, district cluster, transcript, phonological tokens, and grounding citations.
+   - **ICML 1200 Predictions CSV:** Conforms directly to `dialectloop_predictions_1200.csv` (`segment_id, stratum, has_error_gt, dialect_gt, manual_pred_err, manual_pred_dialect, gpt4o_pred_err, gpt4o_pred_dialect, loop_pred_err, loop_pred_dialect`).
+   - **LaTeX Table Snippet:** Ready for direct inclusion in ICML / ACL manuscripts.
+   - **DialectLoop Integration:** 1-click loading into the multi-agent Quality Control workspace.
 
 ## Manuscript build
 
