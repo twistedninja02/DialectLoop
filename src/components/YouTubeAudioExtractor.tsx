@@ -43,7 +43,7 @@ export default function YouTubeAudioExtractor({
   const [segmentCount, setSegmentCount] = useState<number>(6);
   const [segmentDuration, setSegmentDuration] = useState<number>(18);
   const [autoGroundWithSearch, setAutoGroundWithSearch] = useState<boolean>(true);
-  const [transcriber, setTranscriber] = useState<'Whisper-large-v3' | 'Whisper-medium' | 'Gemini-3.5-Transcribe'>('Whisper-large-v3');
+  const [transcriber, setTranscriber] = useState<'Whisper-large-v3' | 'Whisper-medium' | 'Kaldi-TDNN-F' | 'Gemini-3.5-Transcribe'>('Whisper-large-v3');
 
   const [loading, setLoading] = useState<boolean>(false);
   const [curatedSources, setCuratedSources] = useState<any[]>([]);
@@ -372,51 +372,70 @@ export default function YouTubeAudioExtractor({
               </div>
             </div>
 
-            {/* ASR Transcriber Selection: OpenAI Whisper vs Gemini */}
+            {/* ASR Transcriber Selection: OpenAI Whisper vs Kaldi vs Gemini */}
             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
-                <label className="text-[11px] font-mono uppercase font-bold text-slate-700 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                  ASR Transcription Engine & Backbone
-                </label>
+                <div>
+                  <label className="text-[11px] font-mono uppercase font-bold text-slate-700 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                    ASR Transcription Engine & Backbone
+                  </label>
+                  <span className="text-[10px] text-slate-500 font-sans block mt-0.5">
+                    Saved to BatchRun schema as <code className="font-mono text-purple-700 font-semibold">{transcriber}</code> for comparative ASR evaluation in the Research Appendix.
+                  </span>
+                </div>
                 {transcriber.includes('Whisper') ? (
                   <a
                     href="https://github.com/openai/whisper"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[10px] font-mono text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-1"
+                    className="text-[10px] font-mono text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-1 self-start sm:self-auto"
                     title="OpenAI Whisper GitHub Open-Source Repository"
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                     github.com/openai/whisper
                   </a>
+                ) : transcriber === 'Kaldi-TDNN-F' ? (
+                  <a
+                    href="https://github.com/kaldi-asr/kaldi"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[10px] font-mono text-emerald-700 hover:text-emerald-900 hover:underline flex items-center gap-1 self-start sm:self-auto font-semibold"
+                    title="Kaldi Speech Recognition Toolkit GitHub Repository"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    github.com/kaldi-asr/kaldi
+                  </a>
                 ) : (
-                  <span className="text-[10px] font-mono text-slate-400">Google AI Studio</span>
+                  <span className="text-[10px] font-mono text-slate-400 self-start sm:self-auto">Google AI Studio</span>
                 )}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
                 {[
                   {
                     id: 'Whisper-large-v3',
                     title: 'Whisper large-v3',
                     subtitle: 'OpenAI GitHub SOTA',
-                    badge: 'Recommended',
-                    isWhisper: true
+                    badge: 'Recommended'
                   },
                   {
                     id: 'Whisper-medium',
                     title: 'Whisper medium',
                     subtitle: 'OpenAI Multilingual',
-                    badge: 'Fast & Efficient',
-                    isWhisper: true
+                    badge: 'Fast & Efficient'
+                  },
+                  {
+                    id: 'Kaldi-TDNN-F',
+                    title: 'Kaldi TDNN-F',
+                    subtitle: 'kaldi-asr/kaldi (Chain)',
+                    badge: 'Phonetic Align'
                   },
                   {
                     id: 'Gemini-3.5-Transcribe',
                     title: 'Gemini 3.5 Transcribe',
                     subtitle: 'Multimodal Audio',
-                    badge: 'Zero-Shot ASR',
-                    isWhisper: false
+                    badge: 'Zero-Shot ASR'
                   }
                 ].map((opt) => (
                   <button

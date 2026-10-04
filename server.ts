@@ -21,6 +21,8 @@ import {
   verifyDialectWithGoogleSearch
 } from "./server-agents";
 import { harvestBanglaAudioData, CURATED_YOUTUBE_SOURCES } from "./server-harvester";
+import { BENGALIAI_KAGGLE_BENCHMARK_CORPUS, generateBengaliAiResearchArtifacts } from "./server-bengaliai";
+import { generateBatchCsv } from "./src/utils/exportBatchCsv";
 
 const app = express();
 const PORT = 3000;
@@ -165,9 +167,103 @@ app.post("/api/harvest-youtube-audio", async (req, res) => {
   }
 });
 
+// Bengali.AI Kaggle Speech Recognition Corpus Endpoints
+app.get("/api/bengaliai-corpus", (req, res) => {
+  try {
+    const { district, split } = req.query;
+    let items = [...BENGALIAI_KAGGLE_BENCHMARK_CORPUS];
+
+    if (district && district !== "All") {
+      items = items.filter(i => i.district.toLowerCase() === String(district).toLowerCase());
+    }
+
+    if (split && split !== "all") {
+      items = items.filter(i => i.split.toLowerCase() === String(split).toLowerCase());
+    }
+
+    const artifacts = generateBengaliAiResearchArtifacts(items);
+
+    res.json({
+      items,
+      totalCount: items.length,
+      datasetName: "Bengali.AI Speech Recognition Kaggle Competition (bengaliai-speech)",
+      provenance: "Kaggle Benchmark / MADASR 1,200-hour Multi-dialect Spoken Bengali Corpus",
+      artifacts
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to fetch Bengali.AI Kaggle corpus" });
+  }
+});
+
+app.post("/api/bengaliai-create-batch", (req, res) => {
+  try {
+    const { district, selectedIds, transcriber } = req.body;
+    let items = [...BENGALIAI_KAGGLE_BENCHMARK_CORPUS];
+
+    if (Array.isArray(selectedIds) && selectedIds.length > 0) {
+      items = items.filter(i => selectedIds.includes(i.utterance_id));
+    } else if (district && district !== "All") {
+      items = items.filter(i => i.district.toLowerCase() === String(district).toLowerCase());
+    }
+
+    if (items.length === 0) {
+      return res.status(400).json({ error: "No segments found matching the selection criteria." });
+    }
+
+    const segments: AudioSegment[] = items.map((item, idx) => ({
+      segment_id: item.utterance_id,
+      district: item.district,
+      duration: item.duration_s,
+      transcript: item.raw_asr_transcript, // Candidate ASR for DialectLoop to QC
+      speaker_id: `bengaliai_${item.speaker_gender}_${item.district.toLowerCase().slice(0, 3)}_${(idx % 4) + 1}`,
+      audio_url: `https://www.kaggle.com/competitions/bengaliai-speech/data?select=${item.split}/${item.utterance_id}.mp3`
+    }));
+
+    const batchId = `bengaliai_kaggle_${Date.now()}`;
+    const newBatch: BatchRun = {
+      batch_id: batchId,
+      name: `Bengali.AI Kaggle Speech (${district || "Multi-District"} - ${items.length} segs)`,
+      segments,
+      current_iteration: 1,
+      status: "pending",
+      error_rate_threshold: 0.05,
+      iterations: [],
+      confirmed_corrections: {},
+      transcriber_type: transcriber || "Whisper-large-v3",
+      cumulative_tokens: {
+        prompt_tokens: 0,
+        completion_tokens: 0,
+        total_tokens: 0,
+        total_cost_usd: 0,
+        cost_per_audio_hour: 0.725
+      }
+    };
+
+    batches[batchId] = newBatch;
+    res.status(201).json(newBatch);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to create Bengali.AI batch" });
+  }
+});
+
 // 3. Get all active batches
 app.get("/api/batches", (req, res) => {
   res.json(Object.values(batches));
+});
+
+// Download batch formatted research CSV
+app.get("/api/batches/:id/csv", (req, res) => {
+  const batch = batches[req.params.id];
+  if (!batch) {
+    return res.status(404).send("Batch not found");
+  }
+  const csvContent = generateBatchCsv(batch);
+  res.setHeader("Content-Type", "text/csv; charset=utf-8");
+  res.setHeader(
+    "Content-Disposition",
+    `attachment; filename="${batch.batch_id}_dialectloop_export.csv"`
+  );
+  res.send(csvContent);
 });
 
 // 4. Create custom batch via JSON upload

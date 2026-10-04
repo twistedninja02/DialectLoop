@@ -375,6 +375,7 @@ export async function harvestBanglaAudioData(options: {
 We are extracting spoken Bengali speech segments from YouTube / web source: "${url}"
 Video Title: "${videoTitle}"
 Target District: "${targetDistrict}" (District Cluster: "${cluster}")
+ASR Transcriber Backbone: "${transcriber}"
 Extract ${count} distinct speech segments of approximately ${duration} seconds each.
 
 For each segment, provide:

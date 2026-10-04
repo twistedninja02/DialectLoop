@@ -21,7 +21,8 @@ import {
   UserCheck,
   Percent,
   HelpCircle,
-  Youtube
+  Youtube,
+  Download
 } from 'lucide-react';
 
 import { BatchRun, AudioSegment, CriticDecision, IterationReport } from './types';
@@ -35,6 +36,8 @@ import DatasetImportModal from './components/DatasetImportModal';
 import MicrophoneTranscriber from './components/MicrophoneTranscriber';
 import GoogleSearchGroundingModal from './components/GoogleSearchGroundingModal';
 import YouTubeAudioExtractor from './components/YouTubeAudioExtractor';
+import BengaliAiKaggleModal from './components/BengaliAiKaggleModal';
+import ExportBatchModal from './components/ExportBatchModal';
 
 // Firebase Auth & Firestore imports
 import { auth, googleProvider, db, testFirestoreConnection } from './firebase';
@@ -43,6 +46,8 @@ import { doc, setDoc, getDocs, collection } from 'firebase/firestore';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'workspace' | 'harvester' | 'python' | 'research'>('workspace');
+  const [showKaggleModal, setShowKaggleModal] = useState<boolean>(false);
+  const [showExportModal, setShowExportModal] = useState<boolean>(false);
   const [batches, setBatches] = useState<BatchRun[]>([]);
   const [selectedBatchId, setSelectedBatchId] = useState<string>('bengali_speech_corpus_74h');
   const [activeBatch, setActiveBatch] = useState<BatchRun | null>(null);
@@ -393,6 +398,14 @@ export default function App() {
                 Research Appendix
               </button>
               <button
+                onClick={() => setShowKaggleModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide text-amber-900 bg-amber-50 hover:bg-amber-100 transition border border-amber-250 cursor-pointer shadow-xs font-bold"
+                title="Browse and fetch Bengali.AI Kaggle Speech benchmark corpus (1,200h multi-dialect corpus)"
+              >
+                <Database className="w-3.5 h-3.5 text-amber-600" />
+                Bengali.AI Kaggle
+              </button>
+              <button
                 onClick={() => setSearchGroundingQuery({ query: activeBatch?.segments[0]?.transcript || 'আঁই যাইউম', district: activeBatch?.segments[0]?.district || 'Chittagong' })}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide text-blue-700 bg-blue-50/80 hover:bg-blue-100 transition border border-blue-200 cursor-pointer"
                 title="Verify dialect idioms with Google Search grounding (gemini-3.5-flash)"
@@ -513,7 +526,14 @@ export default function App() {
                     <h3 className="font-display font-semibold text-slate-800 text-sm flex items-center gap-2">
                       <Database className="w-4 h-4 text-indigo-600" /> Speech Corpora
                     </h3>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <button
+                        onClick={() => setShowKaggleModal(true)}
+                        className="flex items-center gap-1 text-[11px] font-mono uppercase tracking-wider text-amber-800 font-bold hover:text-amber-950 transition px-2 py-1 rounded-lg bg-amber-50 border border-amber-250 cursor-pointer shadow-xs"
+                        title="Fetch Bengali.AI Kaggle Speech recognition dataset"
+                      >
+                        <Database className="w-3.5 h-3.5 text-amber-600" /> Bengali.AI
+                      </button>
                       <button
                         onClick={() => setActiveTab('harvester')}
                         className="flex items-center gap-1 text-[11px] font-mono uppercase tracking-wider text-red-600 font-bold hover:text-red-800 transition px-2 py-1 rounded-lg bg-red-50 border border-red-200 cursor-pointer"
@@ -523,9 +543,9 @@ export default function App() {
                       </button>
                       <button
                         onClick={() => setShowUploadModal(true)}
-                        className="flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-indigo-600 font-bold hover:text-indigo-800 transition px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200 cursor-pointer"
+                        className="flex items-center gap-1 text-[11px] font-mono uppercase tracking-wider text-indigo-600 font-bold hover:text-indigo-800 transition px-2 py-1 rounded-lg bg-indigo-50 border border-indigo-200 cursor-pointer"
                       >
-                        <Upload className="w-3.5 h-3.5" /> Import CSV
+                        <Upload className="w-3.5 h-3.5" /> CSV
                       </button>
                     </div>
                   </div>
@@ -675,7 +695,18 @@ export default function App() {
                           <h2 className="font-display font-bold text-slate-900 text-base mt-0.5 leading-tight">{activeBatch.name}</h2>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                          {activeBatch && (
+                            <button
+                              onClick={() => setShowExportModal(true)}
+                              className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-indigo-200 bg-indigo-50/80 text-indigo-700 text-xs font-semibold hover:bg-indigo-100 transition cursor-pointer shadow-xs"
+                              title="Export active batch as formatted research CSV with transcriber type, error rates, and human-verified corrections"
+                            >
+                              <Download className="w-3.5 h-3.5 text-indigo-600" />
+                              Export CSV
+                            </button>
+                          )}
+
                           <button
                             onClick={() => setShowMicInput(!showMicInput)}
                             className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 text-xs font-semibold hover:bg-rose-100 transition cursor-pointer"
@@ -1672,6 +1703,86 @@ Applied Disagreement Override: If agents disagree on dialect-code consistency, f
                 </div>
               </div>
 
+              {/* Section 6 Bengali.AI Kaggle Benchmark Integration & Research Data Ingestion */}
+              <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                  <div>
+                    <span className="text-[10px] font-mono text-amber-600 uppercase font-bold tracking-widest block">
+                      Section 6: Large-Scale Benchmark Integration
+                    </span>
+                    <h3 className="font-display font-semibold text-slate-900 text-sm mt-1">
+                      Bengali.AI Kaggle Speech Recognition Corpus (MADASR Provenance)
+                    </h3>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setShowKaggleModal(true)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs transition cursor-pointer shadow-xs"
+                    >
+                      <Database className="w-3.5 h-3.5 text-slate-950" />
+                      Open Bengali.AI Corpus Fetcher
+                    </button>
+                    <span className="text-[10px] font-mono px-2.5 py-1 bg-slate-100 border border-slate-200 text-slate-600 rounded-lg">
+                      1,200h Spoken Bengali
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 text-xs text-slate-600 leading-relaxed">
+                  <div className="space-y-3">
+                    <h4 className="font-bold text-slate-800 font-display flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                      Kaggle Competition Data Context
+                    </h4>
+                    <p>
+                      The <strong>Bengali.AI Speech Recognition</strong> competition on Kaggle represents the largest multi-accented, dialectally diverse public spoken Bengali dataset to date. Spanning 1,200 hours of acoustic data across all 64 administrative districts of Bangladesh, it captures authentic regional phonology under real-world acoustic conditions.
+                    </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <h4 className="font-bold text-slate-800 font-display flex items-center gap-1.5">
+                      <Sliders className="w-3.5 h-3.5 text-indigo-600" />
+                      Dialect Manifest & Stratification
+                    </h4>
+                    <p>
+                      Because default Kaggle <code className="bg-slate-100 px-1 py-0.5 rounded text-[11px] font-mono text-indigo-700">train.csv</code> files omit dialectal metadata, DialectLoop links the raw utterance IDs to regional phonetic annotations, classifying each sample across the 5 primary dialect zones (Southeast, Northeast, Northwest, Southwest, and South Central).
+                    </p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <h4 className="font-bold text-slate-800 font-display flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      Publishable Research Artifacts
+                    </h4>
+                    <p>
+                      Researchers can instantly export gold-standard evaluation manifests, formal <code className="bg-slate-100 px-1 py-0.5 rounded text-[11px] font-mono text-emerald-700">LaTeX tables</code>, and official <code className="bg-slate-100 px-1 py-0.5 rounded text-[11px] font-mono text-emerald-700">BibTeX</code> citations to substantiate experimental methodology in research paper submissions.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-amber-50/60 rounded-xl border border-amber-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 bg-amber-100 rounded-lg text-amber-800 font-bold font-mono">
+                      CLI
+                    </div>
+                    <div>
+                      <span className="font-mono font-bold text-amber-950 block">
+                        kaggle competitions download -c bengaliai-speech
+                      </span>
+                      <span className="text-[11px] text-amber-800">
+                        Official Kaggle CLI command for local cluster ingestion and GPU model training
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowKaggleModal(true)}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-slate-900 text-amber-300 rounded-xl font-bold hover:bg-slate-800 transition cursor-pointer self-end sm:self-auto shrink-0"
+                  >
+                    View Kaggle Artifacts <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+
             </motion.div>
           )}
         </AnimatePresence>
@@ -1688,6 +1799,20 @@ Applied Disagreement Override: If agents disagree on dialect-code consistency, f
         )}
       </AnimatePresence>
 
+      {/* Bengali.AI Kaggle Speech Corpus Modal (bengaliai-speech benchmark) */}
+      <AnimatePresence>
+        {showKaggleModal && (
+          <BengaliAiKaggleModal
+            isOpen={showKaggleModal}
+            onClose={() => setShowKaggleModal(false)}
+            onLoadBatchIntoWorkspace={(b) => {
+              handleBatchImported(b);
+              setActiveTab('workspace');
+            }}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Google Search Grounding Modal (Powered by gemini-3.5-flash with googleSearch tool) */}
       <AnimatePresence>
         {searchGroundingQuery && (
@@ -1696,6 +1821,17 @@ Applied Disagreement Override: If agents disagree on dialect-code consistency, f
             onClose={() => setSearchGroundingQuery(null)}
             initialQuery={searchGroundingQuery.query}
             districtCluster={searchGroundingQuery.district}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Export Batch CSV Modal (Research dataset export with UTF-8 BOM) */}
+      <AnimatePresence>
+        {showExportModal && activeBatch && (
+          <ExportBatchModal
+            isOpen={showExportModal}
+            onClose={() => setShowExportModal(false)}
+            batch={activeBatch}
           />
         )}
       </AnimatePresence>

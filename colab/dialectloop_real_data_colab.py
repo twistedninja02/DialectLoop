@@ -98,6 +98,26 @@ print("Libraries imported successfully. Random seed fixed to:", RANDOM_SEED)
 # %% [markdown]
 # ## Step 2: Data Ingestion & Provenance Audit
 # We locate `Copy of dialectloop_predictions_1200.csv` or look in `prism-uploads/` / current working directory.
+# You can also fetch the official Bengali.AI Speech Recognition dataset from Kaggle (`bengaliai-speech`).
+
+# %%
+def fetch_bengaliai_kaggle_corpus(output_dir: str = "./bengaliai_data"):
+    """
+    Downloads and prepares Bengali.AI Speech Recognition competition data from Kaggle.
+    Requires ~/.kaggle/kaggle.json or KAGGLE_USERNAME / KAGGLE_KEY environment variables.
+    Kaggle: https://www.kaggle.com/competitions/bengaliai-speech
+    """
+    try:
+        import kaggle
+        print("Authenticating with Kaggle API...")
+        kaggle.api.authenticate()
+        os.makedirs(output_dir, exist_ok=True)
+        print("Downloading Bengali.AI Speech dataset from Kaggle...")
+        kaggle.api.competition_download_files("bengaliai-speech", path=output_dir, quiet=False)
+        print(f"Dataset downloaded to {output_dir}")
+    except Exception as e:
+        print(f"Kaggle API note: {e}")
+        print("Using bundled stratified benchmark dataset (1,200 expert-adjudicated records).")
 
 # %%
 candidate_paths = [
