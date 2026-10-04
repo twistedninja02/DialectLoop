@@ -1,0 +1,46 @@
+\section{Appendix: Reproducibility, Prompts, and Governance}
+\label{sec:appendix}
+
+\subsection{Limitations}
+\label{subsec:limitations}
+While DialectLoop significantly accelerates low-resource speech curation, several core limitations must be explicitly noted:
+\begin{enumerate}
+    \item \textbf{Text-Only QC Boundary:} As articulated in Section~\ref{subsec:text_qc_boundary}, the multi-agent pipeline operates on orthographic transcripts and contextual metadata. It identifies \textit{hypothesized acoustic discrepancies} and morphological violations, but cannot directly inspect acoustic formants or pitch contours. Native human listening at Gate~\#1 remains indispensable for ground-truth audio verification.
+    \item \textbf{Continuum vs. Discrete Strata:} Dialects in Bangladesh exist along a complex geographic continuum. Categorizing speech into discrete district strata (e.g., Chittagong vs. Noakhali) is an operational simplification for dataset benchmarking; transition zones may exhibit legitimate hybrid features.
+    \item \textbf{Dependency on Baseline LLM Pre-Training:} The system's initial proposals depend on the underlying LLM's pre-training exposure to Bengali script. The few-shot contrastive examples in the Verifier and Critic are crucial to counteract standard-language biases.
+\end{enumerate}
+
+\subsection{Ethics and Data Governance Statement}
+\label{subsec:ethics}
+\paragraph{Consent and Speaker Privacy.}
+All audio recordings in the Bengali speech corpus were compiled with informed speaker consent for academic research purposes or harvested under fair-use provisions for computational linguistic study. Speaker identifiers are strictly de-identified (e.g., \texttt{spk\_chittagong\_01}), and all personal identifiable information (PII) including phone numbers and home addresses was redacted prior to ingestion.
+
+\paragraph{Dialect Dignity and Anti-Assimilation.}
+Dialectal varieties of Bengali (particularly Chittagonian, Sylheti, and Rangpuri) have historically faced linguistic marginalization in formal educational and administrative contexts. DialectLoop is explicitly engineered with a dialect-preservation objective to prevent algorithmic erasure and linguistic homogenization in downstream speech technologies.
+
+\subsection{Verbatim System Prompts}
+\label{subsec:prompts}
+
+\paragraph{Transcription Auditor Prompt:}
+\begin{quote}
+\small
+\texttt{You are a Transcription Quality Auditor specializing in colloquial and regional Bengali speech. Given an audio segment transcript, candidate district, and speaker ID: Inspect the transcript for (1) ASR acoustic mishears, (2) morphological or phonotactic impossibilities, (3) code-switching, and (4) dropped copulas. Output JSON with error\_type, error\_token, suggested\_correction, and confidence.}
+\end{quote}
+
+\paragraph{Dialect Verifier Prompt:}
+\begin{quote}
+\small
+\texttt{You are a Bengali Dialectologist. Given a candidate transcript and putative district: Evaluate whether the grammatical markers and lexical tokens match the genuine regional syntax. Do NOT standardize regional idioms into standard Bengali (Sadhu/Calit). Provide district\_label, dialect\_consistent (boolean), and list of phonological evidence markers.}
+\end{quote}
+
+\paragraph{Adversarial Critic Prompt:}
+\begin{quote}
+\small
+\texttt{You are an Adversarial Quality Control Critic. Ingest the Auditor errors and Verifier report. If the Auditor flags an error but the Verifier confirms the token is an authentic regional dialect marker, REJECT the error. If Auditor and Verifier disagree on dialect boundaries, set uncertainty >= 0.6 to force escalation to Human Gate #1. Output consensus_flag, uncertainty score, and step-by-step resolution reasoning.}
+\end{quote}
+
+\paragraph{Summariser Prompt:}
+\begin{quote}
+\small
+\texttt{You are a Batch Quality Summariser. Review all Critic decisions, human corrections, and residual error rates for Batch B in Iteration i. Diagnose the top systematic failure patterns. Formulate a 3-sentence self-summary and compile a list of confirmed corrections and forbidden correction patterns for Iteration i+1.}
+\end{quote}

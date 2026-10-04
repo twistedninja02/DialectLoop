@@ -1,0 +1,16 @@
+\section{Related Work}
+\label{sec:related_work}
+
+\paragraph{ASR Quality Control and Corpus Curation.}
+Traditional speech corpus curation relies heavily on forced-alignment scoring, word error rate (WER) profiling against secondary acoustic models, or exhaustive manual listening by native transcribers~\citep{panayotov2015librispeech,ardila2020common}. In low-resource and dialect-dense environments, acoustic-only confidence measures degrade substantially due to out-of-vocabulary regional morphology and non-standard phonological shifts~\citep{ahmed2021bengaliai,sarker2023madasr}. Recent efforts have explored multi-agent LLM verification for multimodal datasets; notably, \citet{speechqc2024} introduced \textit{SpeechQC-Agent}, which coordinates specialized LLM prompts to inspect speech recognition logs. However, generic quality-control agents frequently succumb to standard-language bias, aggressively ``correcting'' legitimate regional dialect forms into prestige standard varieties (e.g., rewriting Chittagonian \textit{যাইউম} or Sylheti \textit{যাইমু} into standard Bengali \textit{যাব}).
+
+\paragraph{Bengali Dialectology and Regional ASR.}
+The Bengali dialect continuum spans eastern (Sylheti, Chatgaya, Noakhailla), northern (Varendra, Rangpuri), and south-central varieties with sharp phonetic and morphosyntactic divergences~\citep{grierson1903linguistic,chatterji1926origin}. While national initiatives like the Bengali.AI Speech Recognition benchmark~\citep{ahmed2021bengaliai} and the MADASR low-resource corpus~\citep{sarker2023madasr} have assembled multi-district recordings, automated curation remains bottlenecked by transcription errors and regional misclassification. Existing post-processing LLM pipelines risk hallucinating plausible standard sentences that completely contradict the underlying audio.
+
+\paragraph{Novelty and Distinction of DialectLoop.}
+Unlike prior unconstrained multi-agent frameworks, DialectLoop introduces three specific domain contributions:
+\begin{enumerate}
+    \item \textbf{Dialect-Preserving Objective:} The system decouples transcription error auditing from dialect verification, enforcing asymmetric few-shot constraints that penalize standard-language hyper-correction.
+    \item \textbf{Adversarial Reconciliation via Calibrated Critic:} Rather than relying on simple consensus voting, an adversarial Critic arbitrates between the Auditor and Verifier, computing calibrated epistemic uncertainty ($u$) over multi-sample draws.
+    \item \textbf{Closed-Loop Human Oversight:} A dual-gate mechanism routes high-uncertainty instances ($u \ge 0.6$) to human experts (Gate~\#1) and integrates batch-level feedback via a Summariser into subsequent iterations, guaranteeing convergence below a target error threshold ($\tau = 0.05$).
+\end{enumerate}

@@ -1,0 +1,23 @@
+% Table: Component Ablation Study for DialectLoop
+% Isolating the contributions of the Dialect Verifier, Critic reconciliation, Human Gate #1, Summariser feedback, and iteration loops.
+
+\begin{table*}[t]
+\centering
+\small
+\caption{Ablation analysis on the stratified validation corpus ($N=1{,}200$). All experiments use frozen backbones and identical inputs. Demonstrates that architectural collaboration outperforms budget-matched single agents.}
+\label{tab:ablation_study}
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Ablation Variant} & \textbf{Relative Compute} & \textbf{Precision} & \textbf{Recall} & \textbf{$F_1$ Score} & \textbf{Dialect Acc.} & \textbf{Cohen's $\kappa$} \\
+\midrule
+(1) Auditor-only & $1.0\times$ & 76.2\% & 82.5\% & 79.2\% & 78.4\% & 0.72 \\
+(2) Budget-Matched Auditor & $3.2\times$ & 80.4\% & 86.0\% & 83.1\% & 81.2\% & 0.76 \\
+(3) Auditor + Verifier & $2.1\times$ & 84.1\% & 87.6\% & 85.8\% & 86.1\% & 0.81 \\
+(4) Single-Iteration Cascade ($i=1$) & $2.8\times$ & 87.0\% & 89.8\% & 88.4\% & 88.0\% & 0.84 \\
+(5) Cascade w/o Gate \#1 Escalation & $3.1\times$ & 86.3\% & 88.2\% & 87.2\% & 86.9\% & 0.82 \\
+(6) Cascade w/o Summariser Feedback & $3.3\times$ & 87.5\% & 90.4\% & 88.9\% & 88.2\% & 0.83 \\
+\midrule
+(7) \textbf{Full DialectLoop Workflow} & $3.2\times$ & \textbf{91.8\%} & \textbf{93.0\%} & \textbf{92.4\%} & \textbf{91.9\%} & \textbf{0.88} \\
+\bottomrule
+\end{tabular}
+\end{table*}

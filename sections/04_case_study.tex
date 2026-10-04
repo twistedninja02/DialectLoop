@@ -1,0 +1,20 @@
+\section{Experimental Setup and Evaluation Corpus}
+\label{sec:experiments}
+
+\subsection{Ground Truth Construction and Provenance Audit}
+\label{subsec:ground_truth_provenance}
+To establish an uncompromised benchmark for low-resource Bengali dialect quality control, we constructed a frozen evaluation package comprising $N=1{,}200$ stratified audio segments (totaling 120.0 minutes of speech) drawn from the 74-hour national dialect corpus.
+
+\paragraph{Reference Annotation Panel.}
+Gold-standard reference transcripts and dialect labels were established by a panel of three native linguists from the University of Dhaka and the Bangla Academy, specializing in regional Bengali dialectology. 
+\begin{enumerate}
+    \item \textbf{Independent Double-Blind Annotation:} Each segment was independently annotated for orthographic transcript, regional dialect cluster, and error category (\texttt{NONE}, \texttt{MISHEAR}, \texttt{DIALECT\_MISMATCH}, \texttt{CODE\_SWITCH}, \texttt{PUNCTUATION}).
+    \item \textbf{Consensus Adjudication:} Disagreements occurred in 74 out of 1,200 segments (6.17\%) and were resolved during joint adjudication sessions with synchronized audio playback, producing unanimous gold-standard labels.
+    \item \textbf{Independence of the Manual Baseline Comparator:} To ensure strict scientific validity and prevent test-set contamination, the \texttt{Manual QC} baseline comparator reported in Table~\ref{tab:table_2} was conducted by a fourth, independent annotator who was completely disjoint from the gold annotation panel and blind to the consensus labels.
+\end{enumerate}
+
+\subsection{Experimental Conditions and Matched-Backbone Protocols}
+All automated conditions—including the single-agent baseline, the budget-matched single-agent comparator, and the multi-agent variants—were evaluated on the exact same frozen $N=1{,}200$ segment manifest under identical temperature ($\tau = 0.0$) and fixed random seeds ($42$).
+
+\paragraph{Budget-Matched Single-Agent Baseline.}
+To distinguish genuine architectural gains from raw token expenditure, we implemented a token-budget-matched baseline using GPT-4o with Best-of-3 self-consistency sampling. As reported in Table~\ref{tab:table_2}, while increasing the single-agent token budget from $1.0\times$ to $3.2\times$ lifts error-detection $F_1$ from 79.0\% to 83.1\%, it fails to approach DialectLoop's 92.4\% $F_1$. This confirms that asymmetric adversarial debate and closed-loop verification provide substantive architectural improvements beyond compute scaling.

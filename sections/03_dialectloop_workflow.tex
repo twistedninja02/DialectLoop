@@ -1,0 +1,27 @@
+\section{The DialectLoop Workflow}
+\label{sec:workflow}
+
+\subsection{Architectural Overview and Agent Roles}
+DialectLoop operates as an iterative multi-agent cascade with four distinct roles:
+\begin{enumerate}
+    \item \textbf{Transcription Auditor:} Inspects the candidate transcript against dialect context, hypothesizing acoustic mishears, phonotactic anomalies, and disfluency slips.
+    \item \textbf{Dialect Verifier:} Independently classifies the regional dialect stratum and validates whether morphological inflections match documented regional grammars.
+    \item \textbf{Adversarial Critic:} Ingests the Auditor and Verifier outputs, evaluates mutual consistency, and calculates an epistemic uncertainty score $u \in [0, 1]$.
+    \item \textbf{Summariser:} Aggregates batch-level error distributions at the end of each iteration, diagnosing systematic failure patterns and injecting explicit constraints into the next iteration.
+\end{enumerate}
+
+\subsection{Precise Operational Boundary of Text-Only Quality Control}
+\label{subsec:text_qc_boundary}
+A foundational methodological question is what a text-centric LLM pipeline can and cannot substantiate during speech corpus curation:
+\begin{itemize}
+    \item \textbf{What Text-Only QC Verifies:} The pipeline reliably flags textually manifest inconsistencies, including out-of-vocabulary morphological violations, impossible consonant clusters in Bengali phonotactics, code-switching occurrences, and syntactic slips.
+    \item \textbf{Distinction Between Text Flags and Audio Ground Truth:} When the Auditor assigns an error category such as \texttt{MISHEAR}, it produces a \textit{hypothesized acoustic discrepancy} rather than an empirical acoustic confirmation. In accordance with prior speech correction literature~\citep{mani2020asr,liao2023investigating}, unconstrained LLM decoders exhibit a propensity for generating fluent grammatical corrections that diverge from what was actually uttered by the speaker.
+    \item \textbf{Mitigation via Human Gate~\#1:} To prevent acoustic hallucination, DialectLoop strictly forbids autonomous overwriting of ambiguous segments. Any segment with uncertainty $u \ge 0.6$ or where the Verifier rejects the Auditor's hypothesis is escalated to Human Gate~\#1, where native linguists listen to the underlying audio file before confirming or rejecting the suggested correction.
+\end{itemize}
+
+\subsection{Stopping Rule and Iterative Feedback Dynamics}
+The iteration continues over fixed 10-minute batches $B$. In each iteration $i \in \{1, 2, 3\}$, the residual batch error rate is evaluated:
+\begin{equation}
+    e_{B, i} = \frac{1}{|B|} \sum_{s \in B} \mathbb{I}(\text{Critic flags segment } s \text{ as containing an unverified error}).
+\end{equation}
+The batch terminates immediately if $e_{B, i} \le \tau$ (where $\tau = 0.05$), or after a maximum of $M = 3$ iterations, at which point the batch is routed to Human Gate~\#2 for final sign-off.

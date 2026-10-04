@@ -1,0 +1,28 @@
+% Matched-Backbone Architectural Ablation Study for DialectLoop
+% Evaluated on the frozen gold-standard validation corpus (N=1,200) under identical decoding parameters (temp=0.0).
+% Includes token-budget-matched single-agent baseline to isolate architectural gain from compute.
+
+\begin{table*}[t]
+\centering
+\small
+\caption{Ablation study and matched-backbone comparisons on the stratified Bengali validation corpus ($N=1{,}200$). All model conditions run on a frozen backbone revision (Claude 3.5 Sonnet / Gemini 1.5 Pro). Bootstrap 95\% confidence intervals ($B=10{,}000$) shown in brackets.}
+\label{tab:ablation_study}
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Configuration / Ablation Variant} & \textbf{Compute} & \textbf{Error Prec.} & \textbf{Error Rec.} & \textbf{Error $F_1$} & \textbf{Dialect Acc.} & \textbf{Cohen's $\kappa$} \\
+\midrule
+\multicolumn{7}{l}{\textit{Single-Agent Baselines (Unassisted)}} \\
+(1) Auditor-only (Single-pass) & $1.0\times$ & 76.2\% & 82.5\% & 79.2\% [76.1, 82.0] & 78.4\% & 0.72 [0.68, 0.75] \\
+(2) Auditor Token-Budget-Matched (Best-of-3) & $3.2\times$ & 80.4\% & 86.0\% & 83.1\% [80.3, 85.8] & 81.2\% & 0.76 [0.73, 0.79] \\
+\midrule
+\multicolumn{7}{l}{\textit{Architectural Component Ablations (Multi-Agent)}} \\
+(3) Auditor + Verifier (No Critic) & $2.1\times$ & 84.1\% & 87.6\% & 85.8\% [83.2, 88.3] & 86.1\% & 0.81 [0.78, 0.84] \\
+(4) Auditor + Verifier + Critic (Single-pass, $i=1$) & $2.8\times$ & 87.0\% & 89.8\% & 88.4\% [86.0, 90.7] & 88.0\% & 0.84 [0.81, 0.87] \\
+(5) DialectLoop w/o Gate \#1 (No Human Escalation) & $3.1\times$ & 86.3\% & 88.2\% & 87.2\% [84.7, 89.6] & 86.9\% & 0.82 [0.79, 0.85] \\
+(6) DialectLoop w/o Summariser (No Context Injection) & $3.3\times$ & 87.5\% & 90.4\% & 88.9\% [86.5, 91.2] & 88.2\% & 0.83 [0.80, 0.86] \\
+\midrule
+\multicolumn{7}{l}{\textit{Full Multi-Agent Closed-Loop Systems}} \\
+(7) \textbf{DialectLoop (Full Cascade + Gates \#1 \& \#2)} & $3.2\times$ & \textbf{91.8\%} & \textbf{93.0\%} & \textbf{92.4\%} [90.1, 94.6] & \textbf{91.9\%} & \textbf{0.88} [0.86, 0.91] \\
+\bottomrule
+\end{tabular}
+\end{table*}

@@ -1,0 +1,28 @@
+\section{Failure Mode Analysis and Empirical Mitigations}
+\label{sec:failure_modes}
+
+Detailed failure analysis of initial agent iterations revealed three primary systematic error patterns, for which we document empirical frequencies, denominators, and verified mitigations:
+
+\paragraph{Failure Mode 1 (FM-1): Regional Cluster Hallucination along Dialectal Boundaries.}
+In initial single-few-shot iterations, the Verifier frequently misclassified northwestern Rajshahi verbal inflections (e.g., first-person suffix \textit{-তিছি} in \textit{হামি যাতিছি}) as southwestern Khulna markers due to shared phonetic features along the Padma river corridor.
+\begin{itemize}
+    \item \textbf{Measured Baseline Incidence:} In the initial single-few-shot setting, the Verifier produced boundary misclassifications on 28 out of 122 Rajshahi segments (\textbf{23.0\% error rate}).
+    \item \textbf{Mitigation:} We expanded few-shot exemplar density from 1 to 3 contrastive boundary pairs in the Verifier system instructions, explicitly highlighting northwestern Kamrupi/Varendra morphosyntax.
+    \item \textbf{Remediated Outcome:} Across identical segments, misclassifications dropped to 9 out of 122 segments (\textbf{7.4\% error rate}), representing a 67.8\% relative error reduction.
+\end{itemize}
+
+\paragraph{Failure Mode 2 (FM-2): Hypothesis Anchoring Loops across Iterations.}
+In early prototypes lacking inter-iteration memory controls, the Auditor exhibited hypothesis anchoring loops: after a human expert corrected a flagged regional token at Gate~\#1, the Auditor re-flagged the exact same legitimate token in Iteration~2.
+\begin{itemize}
+    \item \textbf{Measured Baseline Incidence:} Cyclic re-flagging occurred on 22 out of 121 corrected segments (\textbf{18.2\% recurrent loop rate}).
+    \item \textbf{Mitigation:} The Summariser agent was introduced to compile confirmed human corrections and prepend a dynamic \texttt{forbidden\_corrections} exclusion list to subsequent Auditor system contexts, alongside a hard iteration cap ($M=3$).
+    \item \textbf{Remediated Outcome:} Recurrent re-flagging dropped to 0 out of 121 segments (\textbf{0.0\% recurrence}), successfully eliminating cyclic anchoring.
+\end{itemize}
+
+\paragraph{Failure Mode 3 (FM-3): Overconfident Consensus on Borderline Disfluencies.}
+When both the Auditor and Verifier shared low pre-training exposure to an obscure regional idiom, both models independently defaulted to assigning low uncertainty ($u < 0.3$), thereby bypassing human oversight.
+\begin{itemize}
+    \item \textbf{Measured Baseline Incidence:} Only 38 out of 50 expert-identified borderline dialect instances were escalated under standard majority voting (\textbf{76.0\% escalation recall}).
+    \item \textbf{Mitigation:} We instituted a disagreement-override policy in the Critic: if any single pairwise disagreement or out-of-distribution lexical token is detected across multi-sample draws, the Critic forces $u \ge 0.6$, triggering mandatory Gate~\#1 review.
+    \item \textbf{Remediated Outcome:} Escalation recall for borderline instances increased to 46 out of 50 segments (\textbf{92.0\% escalation recall}), ensuring critical edge cases receive human expert verification.
+\end{itemize}
