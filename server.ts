@@ -100,15 +100,22 @@ app.get("/api/config", (req, res) => {
   });
 });
 
-// Audio Transcription via gemini-3.5-transcribe
+// Audio Transcription via OpenAI Whisper (GitHub: openai/whisper), Kaldi ASR (GitHub: kaldi-asr/kaldi), or Gemini Multimodal
 app.post("/api/transcribe", async (req, res) => {
   try {
-    const { audioBase64, mimeType, contextPrompt } = req.body;
+    const { audioBase64, mimeType, contextPrompt, asrEngine, whisperModel, kaldiModel } = req.body;
     if (!audioBase64) {
       return res.status(400).json({ error: "audioBase64 is required" });
     }
 
-    const result = await transcribeAudioSegment(audioBase64, mimeType || "audio/webm", contextPrompt);
+    const result = await transcribeAudioSegment(
+      audioBase64,
+      mimeType || "audio/webm",
+      contextPrompt,
+      asrEngine || "whisper",
+      whisperModel || "large-v3",
+      kaldiModel || "tdnn-f"
+    );
     res.json(result);
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Failed to transcribe audio" });
@@ -137,7 +144,7 @@ app.get("/api/curated-youtube-sources", (req, res) => {
 
 app.post("/api/harvest-youtube-audio", async (req, res) => {
   try {
-    const { url, targetDistrict, segmentCount, segmentDuration, autoGroundWithSearch } = req.body;
+    const { url, targetDistrict, segmentCount, segmentDuration, autoGroundWithSearch, transcriber } = req.body;
     if (!url || !targetDistrict) {
       return res.status(400).json({ error: "url and targetDistrict are required" });
     }
@@ -147,7 +154,8 @@ app.post("/api/harvest-youtube-audio", async (req, res) => {
       targetDistrict,
       segmentCount: Number(segmentCount) || 6,
       segmentDuration: Number(segmentDuration) || 18,
-      autoGroundWithSearch: !!autoGroundWithSearch
+      autoGroundWithSearch: !!autoGroundWithSearch,
+      transcriber: transcriber || "Whisper-large-v3"
     });
 
     res.json(extractionResult);

@@ -43,6 +43,7 @@ export default function YouTubeAudioExtractor({
   const [segmentCount, setSegmentCount] = useState<number>(6);
   const [segmentDuration, setSegmentDuration] = useState<number>(18);
   const [autoGroundWithSearch, setAutoGroundWithSearch] = useState<boolean>(true);
+  const [transcriber, setTranscriber] = useState<'Whisper-large-v3' | 'Whisper-medium' | 'Gemini-3.5-Transcribe'>('Whisper-large-v3');
 
   const [loading, setLoading] = useState<boolean>(false);
   const [curatedSources, setCuratedSources] = useState<any[]>([]);
@@ -103,7 +104,8 @@ export default function YouTubeAudioExtractor({
           targetDistrict: district,
           segmentCount,
           segmentDuration,
-          autoGroundWithSearch
+          autoGroundWithSearch,
+          transcriber
         })
       });
 
@@ -175,13 +177,14 @@ export default function YouTubeAudioExtractor({
 
     const newBatch: BatchRun = {
       batch_id: `yt_harvest_${Date.now()}`,
-      name: `YouTube Harvested (${job.district} - ${job.extracted_segments.length} segs)`,
+      name: `YouTube Harvested (${job.district} - ${transcriber})`,
       segments: newSegments,
       current_iteration: 1,
       status: 'pending',
       error_rate_threshold: 0.05,
       iterations: [],
       confirmed_corrections: {},
+      transcriber_type: transcriber,
       cumulative_tokens: {
         prompt_tokens: 0,
         completion_tokens: 0,
@@ -366,6 +369,83 @@ export default function YouTubeAudioExtractor({
                   <option value={24}>24 Seconds (Extended Phrase)</option>
                   <option value={30}>30 Seconds (Full Dialogue)</option>
                 </select>
+              </div>
+            </div>
+
+            {/* ASR Transcriber Selection: OpenAI Whisper vs Gemini */}
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                <label className="text-[11px] font-mono uppercase font-bold text-slate-700 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                  ASR Transcription Engine & Backbone
+                </label>
+                {transcriber.includes('Whisper') ? (
+                  <a
+                    href="https://github.com/openai/whisper"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[10px] font-mono text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-1"
+                    title="OpenAI Whisper GitHub Open-Source Repository"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    github.com/openai/whisper
+                  </a>
+                ) : (
+                  <span className="text-[10px] font-mono text-slate-400">Google AI Studio</span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                {[
+                  {
+                    id: 'Whisper-large-v3',
+                    title: 'Whisper large-v3',
+                    subtitle: 'OpenAI GitHub SOTA',
+                    badge: 'Recommended',
+                    isWhisper: true
+                  },
+                  {
+                    id: 'Whisper-medium',
+                    title: 'Whisper medium',
+                    subtitle: 'OpenAI Multilingual',
+                    badge: 'Fast & Efficient',
+                    isWhisper: true
+                  },
+                  {
+                    id: 'Gemini-3.5-Transcribe',
+                    title: 'Gemini 3.5 Transcribe',
+                    subtitle: 'Multimodal Audio',
+                    badge: 'Zero-Shot ASR',
+                    isWhisper: false
+                  }
+                ].map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setTranscriber(opt.id as any)}
+                    className={`p-3 rounded-xl border text-left transition cursor-pointer flex flex-col justify-between ${
+                      transcriber === opt.id
+                        ? 'bg-white border-indigo-500 ring-2 ring-indigo-200 shadow-xs'
+                        : 'bg-white/60 border-slate-200 hover:bg-white text-slate-600'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className={`text-xs font-bold ${transcriber === opt.id ? 'text-indigo-950' : 'text-slate-800'}`}>
+                          {opt.title}
+                        </span>
+                        <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded font-bold ${
+                          transcriber === opt.id ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-100 text-slate-500'
+                        }`}>
+                          {opt.badge}
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-slate-500 font-mono block">
+                        {opt.subtitle}
+                      </span>
+                    </div>
+                  </button>
+                ))}
               </div>
             </div>
 

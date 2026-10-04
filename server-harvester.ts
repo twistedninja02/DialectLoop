@@ -335,6 +335,7 @@ export async function harvestBanglaAudioData(options: {
   segmentCount?: number;
   segmentDuration?: number;
   autoGroundWithSearch?: boolean;
+  transcriber?: string;
 }): Promise<{
   job: AudioExtractionJob;
   corpusCsv: string;
@@ -344,6 +345,7 @@ export async function harvestBanglaAudioData(options: {
   const { url, targetDistrict } = options;
   const count = options.segmentCount || 6;
   const duration = options.segmentDuration || 18;
+  const transcriber = options.transcriber || "Whisper-large-v3";
   const cluster = getClusterForDistrict(targetDistrict);
 
   // Find if matching curated source exists
@@ -431,6 +433,7 @@ Respond ONLY with a JSON array of segment objects adhering to this schema.`;
             loop_pred_err: item.loop_pred_err !== undefined ? Number(item.loop_pred_err) : (idx % 3 === 2 ? 1 : 0),
             loop_pred_dialect: item.loop_pred_dialect || targetDistrict,
             search_grounded_citation: item.search_grounded_evidence || `Bangla Academy Dialectology Survey (${targetDistrict})`,
+            transcriber_model: transcriber,
             audio_blob_b64: generateSyntheticBeepWav(220 + (idx * 45), duration)
           };
         });
@@ -465,6 +468,7 @@ Respond ONLY with a JSON array of segment objects adhering to this schema.`;
         speaker_id: `spk_${targetDistrict.toLowerCase()}_0${(idx % 2) + 1}`,
         transcript: template.text,
         phonetic_dialect_tokens: template.tokens,
+        transcriber_model: transcriber,
         has_error_gt: template.has_err,
         dialect_gt: targetDistrict,
         manual_pred_err: template.manual_err,
@@ -486,6 +490,7 @@ Respond ONLY with a JSON array of segment objects adhering to this schema.`;
     channel_name: channelName,
     district: targetDistrict,
     district_cluster: cluster,
+    transcriber,
     total_duration_sec: count * duration,
     extracted_segments: extractedSegments,
     status: 'completed',
@@ -504,6 +509,7 @@ Respond ONLY with a JSON array of segment objects adhering to this schema.`;
     "district",
     "district_cluster",
     "speaker_id",
+    "transcriber_model",
     "transcript",
     "phonetic_dialect_tokens",
     "has_error_gt",
@@ -520,6 +526,7 @@ Respond ONLY with a JSON array of segment objects adhering to this schema.`;
     `"${s.district}"`,
     `"${s.district_cluster}"`,
     `"${s.speaker_id}"`,
+    `"${s.transcriber_model || transcriber}"`,
     `"${s.transcript.replace(/"/g, '""')}"`,
     `"${s.phonetic_dialect_tokens.join('; ')}"`,
     s.has_error_gt,

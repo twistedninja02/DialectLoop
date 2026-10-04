@@ -66,6 +66,7 @@ export interface BatchRun {
   error_rate_threshold: number; // default τ = 0.05
   iterations: IterationReport[];
   confirmed_corrections: Record<string, string>; // segment_id -> correct transcript
+  transcriber_type?: 'Whisper-large-v3' | 'Whisper-medium' | 'Gemini-3.5-Transcribe' | 'Kaldi-TDNN-F' | string;
   cumulative_tokens?: {
     prompt_tokens: number;
     completion_tokens: number;
@@ -91,6 +92,7 @@ export interface ExtractedAudioSegment {
   speaker_id: string;
   transcript: string;
   phonetic_dialect_tokens: string[];
+  transcriber_model?: string;
   // ICML 1200 predictions columns
   has_error_gt: number; // 0 or 1
   dialect_gt: string;
@@ -113,6 +115,7 @@ export interface AudioExtractionJob {
   channel_name: string;
   district: string;
   district_cluster: string;
+  transcriber?: string;
   total_duration_sec: number;
   extracted_segments: ExtractedAudioSegment[];
   status: 'processing' | 'completed' | 'failed';
